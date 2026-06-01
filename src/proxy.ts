@@ -47,9 +47,9 @@ export default async function proxy(request: NextRequest) {
    * Protección de rutas:
    * Si no hay usuario y la ruta no es pública → redirigimos al login
    */
-  if (!user && !request.nextUrl.pathname.startsWith('/auth')) {
+  if (!user && !request.nextUrl.pathname.startsWith('/login') && !request.nextUrl.pathname.startsWith('/register')) {
     const url = request.nextUrl.clone()
-    url.pathname = '/auth/login'
+    url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
