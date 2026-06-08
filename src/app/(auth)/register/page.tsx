@@ -55,21 +55,29 @@ export default function RegisterPage() {
       return
     }
 
-    if (data.user) {
-      const { error: profileError } = await supabase
-        .from('usuarios')
-        .insert({
-          id: data.user.id,
-          nombre,
-          email,
-        })
+    async function handleRegister(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
 
-      if (profileError) {
-        setError('Error al crear el perfil. Intentá de nuevo.')
-        setLoading(false)
-        return
-      }
+    const { error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { nombre },
+      },
+    })
+
+    if (authError) {
+      setError(authError.message)
+      setLoading(false)
+      return
     }
+
+    // El perfil se crea automáticamente via trigger en Supabase
+    setSuccess(true)
+    setLoading(false)
+  }
 
     setSuccess(true)
     setLoading(false)
