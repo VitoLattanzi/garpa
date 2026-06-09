@@ -1,1 +1,22 @@
 @import "tailwindcss";
+
+:root {
+  /* Fondos */
+  --bg-base: #0F1923;
+  --bg-card: #172130;
+  --bg-border: #1E2D3D;
+
+  /* Texto */
+  --text-primary: #E8E0D5;
+  --text-secondary: #8A9BAA;
+  --text-muted: #4A6A7A;
+
+  /* Acento positivo — verde salvia */
+  --color-positive: #3D8B7A;
+
+  /* Acento negativo — rojo ladrillo */
+  --color-negative: #C0675A;
+
+  /* Acento neutro — azul acero */
+  --color-accent: #2A6496;
+}

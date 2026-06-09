@@ -2,73 +2,202 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 
+// Tipos para los datos que traemos de la DB
+type Usuario = {
+  nombre: string
+  email: string
+}
+
+type Grupo = {
+  id: string
+  nombre: string
+}
+
+type Deuda = {
+  id: string
+  monto: number
+  saldado: boolean
+  acreedor_id: string
+  deudor_id: string
+  gastos: {
+    descripcion: string
+    grupos: { nombre: string } | null
+  }
+  acreedor: { nombre: string }
+  deudor: { nombre: string }
+}
+
+type Gasto = {
+  id: string
+  descripcion: string
+  monto: number
+  fecha: string
+  pagado_por: string
+  grupos: { nombre: string } | null
+  pagador: { nombre: string }
+}
+
 /**
- * Página principal del dashboard
- * Muestra el balance general, últimos movimientos y grupos del usuario
+ * Dashboard principal de Garpa
+ * Muestra balance real, grupos del usuario y últimos movimientos
+ * Todos los datos se traen desde Supabase
  */
 export default function DashboardPage() {
   const router = useRouter()
   const supabase = createSupabaseBrowserClient()
 
-  const [user, setUser] = useState<{ nombre: string; email: string } | null>(null)
+  const [user, setUser] = useState<Usuario | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [grupos, setGrupos] = useState<Grupo[]>([])
+  const [deudas, setDeudas] = useState<Deuda[]>([])
+  const [gastos, setGastos] = useState<Gasto[]>([])
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [gruposExpanded, setGruposExpanded] = useState(true)
   const [activeModal, setActiveModal] = useState<'debo' | 'meDeban' | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  // Obtiene el perfil del usuario logueado
   useEffect(() => {
-    async function getUser() {
+    async function cargarDatos() {
+      // Verificamos sesión activa
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return router.push('/login')
 
-      const { data } = await supabase
+      const uid = session.user.id
+      setUserId(uid)
+
+      // Traemos el perfil del usuario
+      const { data: perfil } = await supabase
         .from('usuarios')
         .select('nombre, email')
-        .eq('id', session.user.id)
+        .eq('id', uid)
         .single()
+      if (perfil) setUser(perfil)
 
-      if (data) setUser(data)
+      // Traemos los grupos donde el usuario es miembro
+      const { data: miembros } = await supabase
+        .from('miembros_grupo')
+        .select('grupos(id, nombre)')
+        .eq('usuario_id', uid)
+      if (miembros) {
+        // Extraemos los grupos del resultado anidado
+        const gruposData = miembros
+          .map((m: any) => m.grupos)
+          .filter(Boolean) as Grupo[]
+        setGrupos(gruposData)
+      }
+
+      // Traemos las deudas del usuario (lo que debe y lo que le deben)
+      const { data: deudasData } = await supabase
+        .from('deudas')
+        .select(`
+          id, monto, saldado, acreedor_id, deudor_id,
+          gastos(descripcion, grupos(nombre)),
+          acreedor:usuarios!deudas_acreedor_id_fkey(nombre),
+          deudor:usuarios!deudas_deudor_id_fkey(nombre)
+        `)
+        .or(`deudor_id.eq.${uid},acreedor_id.eq.${uid}`)
+        .eq('saldado', false)
+      if (deudasData) setDeudas(deudasData as any)
+
+      // Traemos los últimos 5 gastos donde el usuario participa
+      const { data: gastosData } = await supabase
+        .from('participantes_gasto')
+        .select(`
+          gastos(
+            id, descripcion, monto, fecha, pagado_por,
+            grupos(nombre),
+            pagador:usuarios!gastos_pagado_por_fkey(nombre)
+          )
+        `)
+        .eq('usuario_id', uid)
+        .limit(5)
+      if (gastosData) {
+        const gastosFlat = gastosData
+          .map((p: any) => p.gastos)
+          .filter(Boolean) as Gasto[]
+        setGastos(gastosFlat)
+      }
+
+      setLoading(false)
     }
-    getUser()
+
+    cargarDatos()
   }, [])
 
-  // Cierra el modal al hacer click fuera
-  function handleBackdropClick() {
-    setActiveModal(null)
-  }
+  // Calcula el total que el usuario debe
+  const totalDebo = deudas
+    .filter(d => d.deudor_id === userId && !d.saldado)
+    .reduce((acc, d) => acc + d.monto, 0)
+
+  // Calcula el total que le deben al usuario
+  const totalMeDeben = deudas
+    .filter(d => d.acreedor_id === userId && !d.saldado)
+    .reduce((acc, d) => acc + d.monto, 0)
+
+  // Balance neto
+  const balanceNeto = totalMeDeben - totalDebo
+
+  // Deudas donde el usuario es el deudor
+  const deudasQueDebo = deudas.filter(d => d.deudor_id === userId)
+
+  // Deudas donde el usuario es el acreedor
+  const deudasQueMeDeben = deudas.filter(d => d.acreedor_id === userId)
 
   async function handleLogout() {
     await supabase.auth.signOut()
     router.push('/login')
   }
 
-  // Iniciales para el avatar
   function getInitials(nombre: string) {
     return nombre.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
   }
 
+  function formatMonto(monto: number) {
+    return `$${monto.toLocaleString('es-AR')}`
+  }
+
+  function formatFecha(fecha: string) {
+    const d = new Date(fecha)
+    const ahora = new Date()
+    const diff = Math.floor((ahora.getTime() - d.getTime()) / (1000 * 60 * 60 * 24))
+    if (diff === 0) return 'hoy'
+    if (diff === 1) return 'ayer'
+    return `hace ${diff} días`
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center" style={{ background: 'var(--bg-base)' }}>
+        <p style={{ color: 'var(--text-muted)' }} className="text-sm">Cargando...</p>
+      </div>
+    )
+  }
+
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
+    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg-base)' }}>
 
       {/* ===== SIDEBAR ===== */}
-      <aside className={`
-        ${sidebarOpen ? 'w-56' : 'w-14'}
-        flex flex-col bg-white border-r border-gray-100
-        transition-all duration-250 overflow-hidden flex-shrink-0
-      `}>
-
+      <aside
+        className={`${sidebarOpen ? 'w-56' : 'w-14'} flex flex-col flex-shrink-0 transition-all duration-250 overflow-hidden`}
+        style={{ background: 'var(--bg-card)', borderRight: '1px solid var(--bg-border)' }}
+      >
         {/* Logo + toggle */}
-        <div className="flex items-center justify-between px-3 py-3 border-b border-gray-100">
+        <div
+          className="flex items-center justify-between px-3 py-3"
+          style={{ borderBottom: '1px solid var(--bg-border)' }}
+        >
           {sidebarOpen && (
-            <span className="text-base font-medium text-gray-900">garpa</span>
+            <span className="text-base font-medium" style={{ color: 'var(--text-primary)' }}>garpa</span>
           )}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:bg-gray-50 transition ml-auto"
+            className="flex items-center justify-center w-7 h-7 rounded-lg transition ml-auto"
+            style={{ color: 'var(--text-muted)' }}
             aria-label={sidebarOpen ? 'Contraer sidebar' : 'Expandir sidebar'}
           >
-            {/* Ícono de toggle */}
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               {sidebarOpen
                 ? <path d="M11 19l-7-7 7-7M19 19l-7-7 7-7" />
@@ -81,58 +210,69 @@ export default function DashboardPage() {
         {/* Navegación */}
         <nav className="flex flex-col gap-0.5 px-2 py-3">
           {sidebarOpen && (
-            <span className="text-xs text-gray-400 px-2 pb-1">Menú</span>
+            <span className="text-xs px-2 pb-1" style={{ color: 'var(--text-muted)' }}>Menú</span>
           )}
           {[
-            { icon: '🏠', label: 'Inicio', active: true },
-            { icon: '👥', label: 'Amigos', active: false },
-            { icon: '💳', label: 'Gastos', active: false },
-            { icon: '⚙️', label: 'Configuración', active: false },
+            { icon: '🏠', label: 'Inicio', href: '/dashboard', active: true },
+            { icon: '👥', label: 'Amigos', href: '/amigos', active: false },
+            { icon: '💳', label: 'Gastos', href: '/gastos', active: false },
+            { icon: '⚙️', label: 'Configuración', href: '/configuracion', active: false },
           ].map((item) => (
-            <button
+            <Link
               key={item.label}
-              className={`
-                flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition w-full text-left
-                ${item.active
-                  ? 'bg-gray-100 text-gray-900 font-medium'
-                  : 'text-gray-500 hover:bg-gray-50'
-                }
-              `}
+              href={item.href}
+              className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition w-full"
+              style={{
+                background: item.active ? 'var(--bg-border)' : 'transparent',
+                color: item.active ? 'var(--text-primary)' : 'var(--text-secondary)',
+              }}
             >
               <span className="text-base flex-shrink-0">{item.icon}</span>
               {sidebarOpen && <span className="truncate">{item.label}</span>}
-            </button>
+            </Link>
           ))}
         </nav>
 
-        {/* Mis grupos */}
-        <div className="flex flex-col gap-0.5 px-2 flex-1">
+        {/* Mis grupos — colapsable */}
+        <div className="flex flex-col px-2 flex-1 overflow-hidden">
           {sidebarOpen && (
-            <span className="text-xs text-gray-400 px-2 pb-1">Mis grupos</span>
+            <button
+              onClick={() => setGruposExpanded(!gruposExpanded)}
+              className="flex items-center justify-between px-2 pb-1 w-full text-left"
+            >
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Mis grupos</span>
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                {gruposExpanded ? '▲' : '▼'}
+              </span>
+            </button>
           )}
 
-          {/* Grupos del usuario — hardcodeados por ahora, luego se conectan a la DB */}
-          {[
-            { nombre: 'Viaje a Brasil', color: '#7F77DD' },
-            { nombre: 'Casa compartida', color: '#1D9E75' },
-            { nombre: 'Salidas', color: '#EF9F27' },
-          ].map((grupo) => (
-            <button
-              key={grupo.nombre}
-              className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-gray-50 transition w-full text-left"
-            >
-              <div
-                className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ background: grupo.color }}
-              />
-              {sidebarOpen && (
-                <span className="text-sm text-gray-500 truncate">{grupo.nombre}</span>
+          {/* Lista de grupos con scroll si hay muchos */}
+          {gruposExpanded && (
+            <div className="flex flex-col gap-0.5 overflow-y-auto max-h-40">
+              {grupos.length === 0 && sidebarOpen && (
+                <p className="text-xs px-2 py-1" style={{ color: 'var(--text-muted)' }}>
+                  Sin grupos aún
+                </p>
               )}
-            </button>
-          ))}
+              {grupos.map((grupo) => (
+                <button
+                  key={grupo.id}
+                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition w-full text-left"
+                  style={{ color: 'var(--text-secondary)' }}
+                >
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: 'var(--color-positive)' }} />
+                  {sidebarOpen && <span className="text-sm truncate">{grupo.nombre}</span>}
+                </button>
+              ))}
+            </div>
+          )}
 
-          {/* Siempre visible — agregar grupo */}
-          <button className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-gray-50 transition w-full text-left text-gray-400 hover:text-gray-600 mt-1">
+          {/* Siempre visible — nuevo grupo */}
+          <button
+            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition w-full text-left mt-1"
+            style={{ color: 'var(--color-accent)' }}
+          >
             <span className="text-base flex-shrink-0">＋</span>
             {sidebarOpen && <span className="text-sm truncate">Nuevo grupo</span>}
           </button>
@@ -140,21 +280,24 @@ export default function DashboardPage() {
 
         {/* Perfil abajo */}
         <div
-          className="flex items-center gap-2.5 px-3 py-3 border-t border-gray-100 cursor-pointer hover:bg-gray-50 transition"
+          className="flex items-center gap-2.5 px-3 py-3 cursor-pointer transition"
+          style={{ borderTop: '1px solid var(--bg-border)' }}
           onClick={handleLogout}
           title="Cerrar sesión"
         >
-          <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-xs font-medium text-blue-600 flex-shrink-0">
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
+            style={{ background: 'var(--bg-border)', color: 'var(--color-positive)' }}
+          >
             {user ? getInitials(user.nombre) : '??'}
           </div>
           {sidebarOpen && user && (
             <div className="overflow-hidden">
-              <p className="text-sm font-medium text-gray-900 truncate">{user.nombre}</p>
-              <p className="text-xs text-gray-400 truncate">{user.email}</p>
+              <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{user.nombre}</p>
+              <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{user.email}</p>
             </div>
           )}
         </div>
-
       </aside>
 
       {/* ===== CONTENIDO PRINCIPAL ===== */}
@@ -162,10 +305,15 @@ export default function DashboardPage() {
 
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-lg font-medium text-gray-900">
+          <h1 className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>
             Buen día{user ? `, ${user.nombre.split(' ')[0]}` : ''} 👋
           </h1>
-          <p className="text-sm text-gray-400">3 deudas pendientes</p>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+            {deudasQueDebo.length > 0
+              ? `${deudasQueDebo.length} deuda${deudasQueDebo.length > 1 ? 's' : ''} pendiente${deudasQueDebo.length > 1 ? 's' : ''}`
+              : 'Todo al día 🎉'
+            }
+          </p>
         </div>
 
         {/* ===== CARDS DE BALANCE ===== */}
@@ -174,56 +322,94 @@ export default function DashboardPage() {
           {/* Lo que debés */}
           <button
             onClick={() => setActiveModal('debo')}
-            className="bg-white border border-gray-100 rounded-xl p-4 text-left hover:border-gray-200 transition"
+            className="rounded-xl p-4 text-left transition"
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--bg-border)' }}
           >
-            <p className="text-xs text-gray-400 mb-1">Lo que debés</p>
-            <p className="text-2xl font-medium text-red-500">$12.400</p>
-            <p className="text-xs text-gray-400 mt-1">en 2 grupos</p>
+            <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Lo que debés</p>
+            <p className="text-2xl font-medium" style={{ color: 'var(--color-negative)' }}>
+              {formatMonto(totalDebo)}
+            </p>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+              {deudasQueDebo.length} deuda{deudasQueDebo.length !== 1 ? 's' : ''}
+            </p>
           </button>
 
           {/* Te deben */}
           <button
             onClick={() => setActiveModal('meDeban')}
-            className="bg-white border border-gray-100 rounded-xl p-4 text-left hover:border-gray-200 transition"
+            className="rounded-xl p-4 text-left transition"
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--bg-border)' }}
           >
-            <p className="text-xs text-gray-400 mb-1">Te deben</p>
-            <p className="text-2xl font-medium text-green-500">$8.750</p>
-            <p className="text-xs text-gray-400 mt-1">3 personas</p>
+            <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Te deben</p>
+            <p className="text-2xl font-medium" style={{ color: 'var(--color-positive)' }}>
+              {formatMonto(totalMeDeben)}
+            </p>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+              {deudasQueMeDeben.length} persona{deudasQueMeDeben.length !== 1 ? 's' : ''}
+            </p>
           </button>
 
           {/* Balance neto */}
-          <div className="bg-white border border-gray-100 rounded-xl p-4">
-            <p className="text-xs text-gray-400 mb-1">Balance neto</p>
-            <p className="text-2xl font-medium text-gray-900">-$3.650</p>
-            <p className="text-xs text-gray-400 mt-1">este mes</p>
+          <div
+            className="rounded-xl p-4"
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--bg-border)' }}
+          >
+            <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Balance neto</p>
+            <p
+              className="text-2xl font-medium"
+              style={{ color: balanceNeto >= 0 ? 'var(--color-positive)' : 'var(--color-negative)' }}
+            >
+              {balanceNeto >= 0 ? '+' : ''}{formatMonto(balanceNeto)}
+            </p>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>general</p>
           </div>
 
         </div>
 
         {/* ===== ÚLTIMOS MOVIMIENTOS ===== */}
-        <h2 className="text-sm font-medium text-gray-900 mb-3">Últimos movimientos</h2>
+        <h2 className="text-sm font-medium mb-3" style={{ color: 'var(--text-primary)' }}>
+          Últimos movimientos
+        </h2>
         <div className="flex flex-col gap-2">
-          {[
-            { icon: '✈️', titulo: 'Hotel Brasil', grupo: 'Viaje a Brasil', quien: 'Pagó Juan', hace: 'hace 2 días', monto: '-$4.200', neg: true },
-            { icon: '🛒', titulo: 'Supermercado', grupo: 'Casa compartida', quien: 'Pagaste vos', hace: 'hace 3 días', monto: '+$3.100', neg: false },
-            { icon: '🍻', titulo: 'Bar El Federal', grupo: 'Salidas', quien: 'Pagó María', hace: 'hace 5 días', monto: '-$1.800', neg: true },
-          ].map((item) => (
-            <div
-              key={item.titulo}
-              className="bg-white border border-gray-100 rounded-xl px-4 py-3 flex items-center gap-3"
-            >
-              <div className="w-9 h-9 rounded-lg bg-gray-50 flex items-center justify-center text-lg flex-shrink-0">
-                {item.icon}
+          {gastos.length === 0 && (
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              Todavía no hay gastos registrados.
+            </p>
+          )}
+          {gastos.map((gasto) => {
+            const yoPague = gasto.pagado_por === userId
+            return (
+              <div
+                key={gasto.id}
+                className="rounded-xl px-4 py-3 flex items-center gap-3"
+                style={{ background: 'var(--bg-card)', border: '1px solid var(--bg-border)' }}
+              >
+                <div
+                  className="w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0"
+                  style={{ background: 'var(--bg-border)' }}
+                >
+                  💳
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>
+                    {gasto.descripcion}
+                    {gasto.grupos && (
+                      <span style={{ color: 'var(--text-muted)' }}> · {gasto.grupos.nombre}</span>
+                    )}
+                  </p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    {yoPague ? 'Pagaste vos' : `Pagó ${gasto.pagador?.nombre}`} · {formatFecha(gasto.fecha)}
+                  </p>
+                </div>
+                <span
+                  className="text-sm font-medium"
+                  style={{ color: yoPague ? 'var(--color-positive)' : 'var(--color-negative)' }}
+                >
+                  {yoPague ? '+' : '-'}{formatMonto(gasto.monto)}
+                </span>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-900 truncate">{item.titulo} · {item.grupo}</p>
-                <p className="text-xs text-gray-400">{item.quien} · {item.hace}</p>
-              </div>
-              <span className={`text-sm font-medium ${item.neg ? 'text-red-500' : 'text-green-500'}`}>
-                {item.monto}
-              </span>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
       </main>
@@ -231,32 +417,49 @@ export default function DashboardPage() {
       {/* ===== MODAL — Lo que debés ===== */}
       {activeModal === 'debo' && (
         <div
-          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
-          onClick={handleBackdropClick}
+          className="fixed inset-0 flex items-center justify-center z-50"
+          style={{ background: 'rgba(0,0,0,0.6)' }}
+          onClick={() => setActiveModal(null)}
         >
           <div
-            className="bg-white rounded-2xl p-6 w-full max-w-sm mx-4 shadow-lg"
+            className="rounded-2xl p-6 w-full max-w-sm mx-4"
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--bg-border)' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-medium text-gray-900">Lo que debés</h3>
-              <button onClick={() => setActiveModal(null)} className="text-gray-400 hover:text-gray-600">✕</button>
+              <h3 className="text-base font-medium" style={{ color: 'var(--text-primary)' }}>Lo que debés</h3>
+              <button onClick={() => setActiveModal(null)} style={{ color: 'var(--text-muted)' }}>✕</button>
             </div>
+            {deudasQueDebo.length === 0 && (
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No debés nada 🎉</p>
+            )}
             <div className="flex flex-col gap-3">
-              {[
-                { nombre: 'Juan García', grupo: 'Viaje a Brasil', monto: '$4.200' },
-                { nombre: 'María López', grupo: 'Salidas', monto: '$8.200' },
-              ].map((deuda) => (
-                <div key={deuda.nombre} className="flex items-center justify-between py-2 border-b border-gray-50">
+              {deudasQueDebo.map((deuda) => (
+                <div
+                  key={deuda.id}
+                  className="flex items-center justify-between py-2"
+                  style={{ borderBottom: '1px solid var(--bg-border)' }}
+                >
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{deuda.nombre}</p>
-                    <p className="text-xs text-gray-400">{deuda.grupo}</p>
+                    <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                      {deuda.acreedor?.nombre}
+                    </p>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      {deuda.gastos?.descripcion}
+                      {deuda.gastos?.grupos && ` · ${deuda.gastos.grupos.nombre}`}
+                    </p>
                   </div>
-                  <span className="text-sm font-medium text-red-500">{deuda.monto}</span>
+                  <span className="text-sm font-medium" style={{ color: 'var(--color-negative)' }}>
+                    {formatMonto(deuda.monto)}
+                  </span>
                 </div>
               ))}
             </div>
-            <p className="text-xs text-gray-400 text-right mt-4">Total: $12.400</p>
+            {deudasQueDebo.length > 0 && (
+              <p className="text-xs text-right mt-4" style={{ color: 'var(--text-muted)' }}>
+                Total: {formatMonto(totalDebo)}
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -264,33 +467,49 @@ export default function DashboardPage() {
       {/* ===== MODAL — Te deben ===== */}
       {activeModal === 'meDeban' && (
         <div
-          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
-          onClick={handleBackdropClick}
+          className="fixed inset-0 flex items-center justify-center z-50"
+          style={{ background: 'rgba(0,0,0,0.6)' }}
+          onClick={() => setActiveModal(null)}
         >
           <div
-            className="bg-white rounded-2xl p-6 w-full max-w-sm mx-4 shadow-lg"
+            className="rounded-2xl p-6 w-full max-w-sm mx-4"
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--bg-border)' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-medium text-gray-900">Te deben</h3>
-              <button onClick={() => setActiveModal(null)} className="text-gray-400 hover:text-gray-600">✕</button>
+              <h3 className="text-base font-medium" style={{ color: 'var(--text-primary)' }}>Te deben</h3>
+              <button onClick={() => setActiveModal(null)} style={{ color: 'var(--text-muted)' }}>✕</button>
             </div>
+            {deudasQueMeDeben.length === 0 && (
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Nadie te debe nada.</p>
+            )}
             <div className="flex flex-col gap-3">
-              {[
-                { nombre: 'Carlos Ruiz', grupo: 'Casa compartida', monto: '$3.100' },
-                { nombre: 'Ana Martínez', grupo: 'Viaje a Brasil', monto: '$2.650' },
-                { nombre: 'Pedro Silva', grupo: 'Salidas', monto: '$3.000' },
-              ].map((deuda) => (
-                <div key={deuda.nombre} className="flex items-center justify-between py-2 border-b border-gray-50">
+              {deudasQueMeDeben.map((deuda) => (
+                <div
+                  key={deuda.id}
+                  className="flex items-center justify-between py-2"
+                  style={{ borderBottom: '1px solid var(--bg-border)' }}
+                >
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{deuda.nombre}</p>
-                    <p className="text-xs text-gray-400">{deuda.grupo}</p>
+                    <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                      {deuda.deudor?.nombre}
+                    </p>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      {deuda.gastos?.descripcion}
+                      {deuda.gastos?.grupos && ` · ${deuda.gastos.grupos.nombre}`}
+                    </p>
                   </div>
-                  <span className="text-sm font-medium text-green-500">{deuda.monto}</span>
+                  <span className="text-sm font-medium" style={{ color: 'var(--color-positive)' }}>
+                    {formatMonto(deuda.monto)}
+                  </span>
                 </div>
               ))}
             </div>
-            <p className="text-xs text-gray-400 text-right mt-4">Total: $8.750</p>
+            {deudasQueMeDeben.length > 0 && (
+              <p className="text-xs text-right mt-4" style={{ color: 'var(--text-muted)' }}>
+                Total: {formatMonto(totalMeDeben)}
+              </p>
+            )}
           </div>
         </div>
       )}
