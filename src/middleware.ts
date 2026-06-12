@@ -2,28 +2,21 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 /**
- * Proxy global de Next.js (antes llamado middleware)
- * Se ejecuta en CADA request antes de que llegue a la página
- * Funciona como un "portero" que verifica si el usuario está autenticado
+ * Middleware global de Next.js
+ * Protege rutas privadas verificando sesión de Supabase
+ * También permite acceso a usuarios en modo demo via cookie temporal
  */
-export default async function proxy(request: NextRequest) {
-  // Creamos una respuesta base que deja pasar el request normalmente
+export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
-  /**
-   * Creamos un cliente de Supabase especial para el servidor
-   * Maneja las cookies manualmente porque en el servidor no hay document.cookie
-   */
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        // Lee todas las cookies del request entrante
         getAll() {
           return request.cookies.getAll()
         },
-        // Escribe las cookies tanto en el request como en la respuesta
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
@@ -37,17 +30,19 @@ export default async function proxy(request: NextRequest) {
     }
   )
 
-  /**
-   * Verificamos si hay un usuario autenticado
-   * getUser() valida el token JWT contra Supabase
-   */
   const { data: { user } } = await supabase.auth.getUser()
 
-  /**
-   * Protección de rutas:
-   * Si no hay usuario y la ruta no es pública → redirigimos al login
-   */
-  if (!user && !request.nextUrl.pathname.startsWith('/login') && !request.nextUrl.pathname.startsWith('/register')) {
+  // Rutas públicas — no requieren autenticación
+  const isPublicRoute =
+    request.nextUrl.pathname === '/' ||
+    request.nextUrl.pathname.startsWith('/login') ||
+    request.nextUrl.pathname.startsWith('/register')
+
+  // Verificamos si hay una sesión demo activa
+  const isDemo = request.cookies.get('garpa-demo')?.value === 'true'
+
+  // Si no hay usuario real ni demo, y quiere entrar a ruta privada → login
+  if (!user && !isDemo && !isPublicRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
@@ -56,10 +51,6 @@ export default async function proxy(request: NextRequest) {
   return supabaseResponse
 }
 
-/**
- * Define en qué rutas corre el proxy
- * Excluye archivos estáticos para no hacer verificaciones innecesarias
- */
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 }
