@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Geist } from 'next/font/google'
 import './globals.css'
+import Footer from '@/components/Footer'
 
 /**
  * Fuente principal de la app
@@ -31,8 +32,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body className={`${geist.variable} font-sans antialiased bg-gray-50`}>
-        {children}
+      <body className={`${geist.variable} font-sans antialiased bg-gray-50 min-h-screen flex flex-col`}>
+        <main className="flex-1">
+          {children}
+        </main>
+        
       </body>
     </html>
   )

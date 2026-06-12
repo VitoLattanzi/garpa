@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-
+import Footer from "../components/Footer"
 /**
  * Landing page de Garpa
  * Página principal — explica el producto y dirige al login o a la demo
@@ -155,10 +155,7 @@ export default function LandingPage() {
       </section>
 
       {/* ===== FOOTER ===== */}
-      <footer className="border-t border-[#1E2D3D] px-8 py-6 flex items-center justify-between max-w-5xl mx-auto">
-        <span className="text-sm text-[#4A6A7A]">garpa — Split expenses, simplify debts.</span>
-        <span className="text-sm text-[#4A6A7A]">Hecho con Next.js + Supabase</span>
-      </footer>
+      <Footer />
 
     </main>
   )
