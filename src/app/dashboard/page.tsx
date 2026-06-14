@@ -4,32 +4,21 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { useLang } from '@/context/LangContext'
 
-// Tipos para los datos que traemos de la DB
-type Usuario = {
-  nombre: string
-  email: string
-}
-
-type Grupo = {
-  id: string
-  nombre: string
-}
-
+// Tipos para los datos de la DB
+type Usuario = { nombre: string; email: string }
+type Grupo = { id: string; nombre: string }
 type Deuda = {
   id: string
   monto: number
   saldado: boolean
   acreedor_id: string
   deudor_id: string
-  gastos: {
-    descripcion: string
-    grupos: { nombre: string } | null
-  }
+  gastos: { descripcion: string; grupos: { nombre: string } | null }
   acreedor: { nombre: string }
   deudor: { nombre: string }
 }
-
 type Gasto = {
   id: string
   descripcion: string
@@ -40,14 +29,70 @@ type Gasto = {
   pagador: { nombre: string }
 }
 
+// Datos mockeados para el modo demo
+const DEMO_USER: Usuario = { nombre: 'Usuario Demo', email: 'demo@garpa.app' }
+const DEMO_USER_ID = 'demo-user'
+const DEMO_GRUPOS: Grupo[] = [
+  { id: '1', nombre: 'Viaje a Brasil' },
+  { id: '2', nombre: 'Casa compartida' },
+  { id: '3', nombre: 'Salidas' },
+]
+const DEMO_DEUDAS: Deuda[] = [
+  {
+    id: '1', monto: 4200, saldado: false,
+    acreedor_id: 'juan', deudor_id: DEMO_USER_ID,
+    gastos: { descripcion: 'Hotel Brasil', grupos: { nombre: 'Viaje a Brasil' } },
+    acreedor: { nombre: 'Juan García' }, deudor: { nombre: 'Usuario Demo' },
+  },
+  {
+    id: '2', monto: 1800, saldado: false,
+    acreedor_id: 'maria', deudor_id: DEMO_USER_ID,
+    gastos: { descripcion: 'Bar El Federal', grupos: { nombre: 'Salidas' } },
+    acreedor: { nombre: 'María López' }, deudor: { nombre: 'Usuario Demo' },
+  },
+  {
+    id: '3', monto: 3100, saldado: false,
+    acreedor_id: DEMO_USER_ID, deudor_id: 'carlos',
+    gastos: { descripcion: 'Supermercado', grupos: { nombre: 'Casa compartida' } },
+    acreedor: { nombre: 'Usuario Demo' }, deudor: { nombre: 'Carlos Ruiz' },
+  },
+  {
+    id: '4', monto: 2650, saldado: false,
+    acreedor_id: DEMO_USER_ID, deudor_id: 'ana',
+    gastos: { descripcion: 'Vuelo ida y vuelta', grupos: { nombre: 'Viaje a Brasil' } },
+    acreedor: { nombre: 'Usuario Demo' }, deudor: { nombre: 'Ana Martínez' },
+  },
+]
+const DEMO_GASTOS: Gasto[] = [
+  {
+    id: '1', descripcion: 'Hotel Brasil', monto: 16800,
+    fecha: new Date(Date.now() - 2 * 86400000).toISOString(),
+    pagado_por: 'juan', grupos: { nombre: 'Viaje a Brasil' },
+    pagador: { nombre: 'Juan García' },
+  },
+  {
+    id: '2', descripcion: 'Supermercado', monto: 9300,
+    fecha: new Date(Date.now() - 3 * 86400000).toISOString(),
+    pagado_por: DEMO_USER_ID, grupos: { nombre: 'Casa compartida' },
+    pagador: { nombre: 'Usuario Demo' },
+  },
+  {
+    id: '3', descripcion: 'Bar El Federal', monto: 5400,
+    fecha: new Date(Date.now() - 5 * 86400000).toISOString(),
+    pagado_por: 'maria', grupos: { nombre: 'Salidas' },
+    pagador: { nombre: 'María López' },
+  },
+]
+
 /**
  * Dashboard principal de Garpa
- * Muestra balance real, grupos del usuario y últimos movimientos
- * Todos los datos se traen desde Supabase
+ * Soporta modo demo (cookie garpa-demo=true) con datos mockeados
+ * En modo real trae todos los datos desde Supabase
  */
 export default function DashboardPage() {
   const router = useRouter()
   const supabase = createSupabaseBrowserClient()
+  const { t, lang, setLang } = useLang()
 
   const [user, setUser] = useState<Usuario | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
@@ -58,17 +103,33 @@ export default function DashboardPage() {
   const [gruposExpanded, setGruposExpanded] = useState(true)
   const [activeModal, setActiveModal] = useState<'debo' | 'meDeban' | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isDemo, setIsDemo] = useState(false)
 
   useEffect(() => {
     async function cargarDatos() {
-      // Verificamos sesión activa
+      // Detectamos si hay cookie de demo activa
+      const demoActivo = document.cookie.includes('garpa-demo=true')
+      setIsDemo(demoActivo)
+
+      if (demoActivo) {
+        // Modo demo — cargamos datos mockeados sin tocar Supabase
+        setUser(DEMO_USER)
+        setUserId(DEMO_USER_ID)
+        setGrupos(DEMO_GRUPOS)
+        setDeudas(DEMO_DEUDAS)
+        setGastos(DEMO_GASTOS)
+        setLoading(false)
+        return
+      }
+
+      // Modo real — verificamos sesión de Supabase
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return router.push('/login')
 
       const uid = session.user.id
       setUserId(uid)
 
-      // Traemos el perfil del usuario
+      // Perfil del usuario
       const { data: perfil } = await supabase
         .from('usuarios')
         .select('nombre, email')
@@ -76,20 +137,19 @@ export default function DashboardPage() {
         .single()
       if (perfil) setUser(perfil)
 
-      // Traemos los grupos donde el usuario es miembro
+      // Grupos donde el usuario es miembro
       const { data: miembros } = await supabase
         .from('miembros_grupo')
         .select('grupos(id, nombre)')
         .eq('usuario_id', uid)
       if (miembros) {
-        // Extraemos los grupos del resultado anidado
         const gruposData = miembros
           .map((m: any) => m.grupos)
           .filter(Boolean) as Grupo[]
         setGrupos(gruposData)
       }
 
-      // Traemos las deudas del usuario (lo que debe y lo que le deben)
+      // Deudas activas del usuario
       const { data: deudasData } = await supabase
         .from('deudas')
         .select(`
@@ -102,7 +162,7 @@ export default function DashboardPage() {
         .eq('saldado', false)
       if (deudasData) setDeudas(deudasData as any)
 
-      // Traemos los últimos 5 gastos donde el usuario participa
+      // Últimos 5 gastos donde el usuario participa
       const { data: gastosData } = await supabase
         .from('participantes_gasto')
         .select(`
@@ -127,28 +187,27 @@ export default function DashboardPage() {
     cargarDatos()
   }, [])
 
-  // Calcula el total que el usuario debe
+  // Cálculos de balance
   const totalDebo = deudas
-    .filter(d => d.deudor_id === userId && !d.saldado)
+    .filter(d => d.deudor_id === userId)
     .reduce((acc, d) => acc + d.monto, 0)
 
-  // Calcula el total que le deben al usuario
   const totalMeDeben = deudas
-    .filter(d => d.acreedor_id === userId && !d.saldado)
+    .filter(d => d.acreedor_id === userId)
     .reduce((acc, d) => acc + d.monto, 0)
 
-  // Balance neto
   const balanceNeto = totalMeDeben - totalDebo
-
-  // Deudas donde el usuario es el deudor
   const deudasQueDebo = deudas.filter(d => d.deudor_id === userId)
-
-  // Deudas donde el usuario es el acreedor
   const deudasQueMeDeben = deudas.filter(d => d.acreedor_id === userId)
 
-  async function handleLogout() {
-    await supabase.auth.signOut()
-    router.push('/login')
+  function handleLogout() {
+    if (isDemo) {
+      // Borra la cookie demo
+      document.cookie = 'garpa-demo=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+    } else {
+      supabase.auth.signOut()
+    }
+    router.push('/')
   }
 
   function getInitials(nombre: string) {
@@ -160,42 +219,53 @@ export default function DashboardPage() {
   }
 
   function formatFecha(fecha: string) {
-    const d = new Date(fecha)
-    const ahora = new Date()
-    const diff = Math.floor((ahora.getTime() - d.getTime()) / (1000 * 60 * 60 * 24))
-    if (diff === 0) return 'hoy'
-    if (diff === 1) return 'ayer'
-    return `hace ${diff} días`
+    const diff = Math.floor((Date.now() - new Date(fecha).getTime()) / 86400000)
+    if (diff === 0) return lang === 'es' ? 'hoy' : 'today'
+    if (diff === 1) return lang === 'es' ? 'ayer' : 'yesterday'
+    return lang === 'es' ? `hace ${diff} días` : `${diff} days ago`
   }
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center" style={{ background: 'var(--bg-base)' }}>
-        <p style={{ color: 'var(--text-muted)' }} className="text-sm">Cargando...</p>
+      <div className="flex h-screen items-center justify-center bg-[#0F1923]">
+        <p className="text-sm text-[#4A6A7A]">Cargando...</p>
       </div>
     )
   }
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg-base)' }}>
+    <div className="flex h-screen overflow-hidden bg-[#0F1923]">
+
+      {/* ===== BANNER DEMO ===== */}
+      {isDemo && (
+        <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center gap-4 py-2 bg-[#3D8B7A] text-[#0F1923] text-xs font-medium">
+          <span>{t('demo_banner')}</span>
+          <button
+            onClick={handleLogout}
+            className="underline hover:no-underline"
+          >
+            {t('demo_exit')}
+          </button>
+        </div>
+      )}
 
       {/* ===== SIDEBAR ===== */}
       <aside
-        className={`${sidebarOpen ? 'w-56' : 'w-14'} flex flex-col flex-shrink-0 transition-all duration-250 overflow-hidden`}
-        style={{ background: 'var(--bg-card)', borderRight: '1px solid var(--bg-border)' }}
+        className={`
+          ${sidebarOpen ? 'w-56' : 'w-14'}
+          ${isDemo ? 'mt-8' : ''}
+          flex flex-col flex-shrink-0 transition-all duration-250 overflow-hidden
+          bg-[#172130] border-r border-[#1E2D3D]
+        `}
       >
         {/* Logo + toggle */}
-        <div
-          className="flex items-center justify-between px-3 py-3"
-          style={{ borderBottom: '1px solid var(--bg-border)' }}
-        >
+        <div className="flex items-center justify-between px-3 py-3 border-b border-[#1E2D3D]">
           {sidebarOpen && (
-            <span className="text-base font-medium" style={{ color: 'var(--text-primary)' }}>garpa</span>
+            <span className="text-base font-medium text-[#E8E0D5]">garpa</span>
           )}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="flex items-center justify-center w-7 h-7 rounded-lg transition ml-auto"
-            style={{ color: 'var(--text-muted)' }}
+            className="flex items-center justify-center w-7 h-7 rounded-lg text-[#4A6A7A] hover:text-[#8A9BAA] transition ml-auto"
             aria-label={sidebarOpen ? 'Contraer sidebar' : 'Expandir sidebar'}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -210,22 +280,24 @@ export default function DashboardPage() {
         {/* Navegación */}
         <nav className="flex flex-col gap-0.5 px-2 py-3">
           {sidebarOpen && (
-            <span className="text-xs px-2 pb-1" style={{ color: 'var(--text-muted)' }}>Menú</span>
+            <span className="text-xs text-[#4A6A7A] px-2 pb-1">{t('dash_menu')}</span>
           )}
           {[
-            { icon: '🏠', label: 'Inicio', href: '/dashboard', active: true },
-            { icon: '👥', label: 'Amigos', href: '/amigos', active: false },
-            { icon: '💳', label: 'Gastos', href: '/gastos', active: false },
-            { icon: '⚙️', label: 'Configuración', href: '/configuracion', active: false },
+            { icon: '🏠', label: t('dash_home'), href: '/dashboard', active: true },
+            { icon: '👥', label: t('dash_friends'), href: '/amigos', active: false },
+            { icon: '💳', label: t('dash_expenses'), href: '/gastos', active: false },
+            { icon: '⚙️', label: t('dash_settings'), href: '/configuracion', active: false },
           ].map((item) => (
             <Link
-              key={item.label}
+              key={item.href}
               href={item.href}
-              className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition w-full"
-              style={{
-                background: item.active ? 'var(--bg-border)' : 'transparent',
-                color: item.active ? 'var(--text-primary)' : 'var(--text-secondary)',
-              }}
+              className={`
+                flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition w-full
+                ${item.active
+                  ? 'bg-[#1E2D3D] text-[#E8E0D5] font-medium'
+                  : 'text-[#8A9BAA] hover:bg-[#1E2D3D]'
+                }
+              `}
             >
               <span className="text-base flex-shrink-0">{item.icon}</span>
               {sidebarOpen && <span className="truncate">{item.label}</span>}
@@ -240,224 +312,186 @@ export default function DashboardPage() {
               onClick={() => setGruposExpanded(!gruposExpanded)}
               className="flex items-center justify-between px-2 pb-1 w-full text-left"
             >
-              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Mis grupos</span>
-              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                {gruposExpanded ? '▲' : '▼'}
-              </span>
+              <span className="text-xs text-[#4A6A7A]">{t('dash_groups')}</span>
+              <span className="text-xs text-[#4A6A7A]">{gruposExpanded ? '▲' : '▼'}</span>
             </button>
           )}
 
-          {/* Lista de grupos con scroll si hay muchos */}
           {gruposExpanded && (
             <div className="flex flex-col gap-0.5 overflow-y-auto max-h-40">
               {grupos.length === 0 && sidebarOpen && (
-                <p className="text-xs px-2 py-1" style={{ color: 'var(--text-muted)' }}>
-                  Sin grupos aún
-                </p>
+                <p className="text-xs px-2 py-1 text-[#4A6A7A]">{t('dash_no_groups')}</p>
               )}
               {grupos.map((grupo) => (
                 <button
                   key={grupo.id}
-                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition w-full text-left"
-                  style={{ color: 'var(--text-secondary)' }}
+                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[#1E2D3D] transition w-full text-left"
                 >
-                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: 'var(--color-positive)' }} />
-                  {sidebarOpen && <span className="text-sm truncate">{grupo.nombre}</span>}
+                  <div className="w-2 h-2 rounded-full flex-shrink-0 bg-[#3D8B7A]" />
+                  {sidebarOpen && (
+                    <span className="text-sm text-[#8A9BAA] truncate">{grupo.nombre}</span>
+                  )}
                 </button>
               ))}
             </div>
           )}
 
           {/* Siempre visible — nuevo grupo */}
-          <button
-            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition w-full text-left mt-1"
-            style={{ color: 'var(--color-accent)' }}
-          >
+          <button className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[#1E2D3D] transition w-full text-left mt-1 text-[#2A6496]">
             <span className="text-base flex-shrink-0">＋</span>
-            {sidebarOpen && <span className="text-sm truncate">Nuevo grupo</span>}
+            {sidebarOpen && <span className="text-sm truncate">{t('dash_new_group')}</span>}
           </button>
         </div>
 
         {/* Perfil abajo */}
         <div
-          className="flex items-center gap-2.5 px-3 py-3 cursor-pointer transition"
-          style={{ borderTop: '1px solid var(--bg-border)' }}
+          className="flex items-center gap-2.5 px-3 py-3 border-t border-[#1E2D3D] cursor-pointer hover:bg-[#1E2D3D] transition"
           onClick={handleLogout}
-          title="Cerrar sesión"
+          title={t('dash_logout')}
         >
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
-            style={{ background: 'var(--bg-border)', color: 'var(--color-positive)' }}
-          >
+          <div className="w-8 h-8 rounded-full bg-[#1E2D3D] flex items-center justify-center text-xs font-medium text-[#3D8B7A] flex-shrink-0">
             {user ? getInitials(user.nombre) : '??'}
           </div>
           {sidebarOpen && user && (
             <div className="overflow-hidden">
-              <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{user.nombre}</p>
-              <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{user.email}</p>
+              <p className="text-sm font-medium text-[#E8E0D5] truncate">{user.nombre}</p>
+              <p className="text-xs text-[#4A6A7A] truncate">{user.email}</p>
             </div>
           )}
         </div>
       </aside>
 
       {/* ===== CONTENIDO PRINCIPAL ===== */}
-      <main className="flex-1 overflow-y-auto p-6">
+      <main className={`flex-1 overflow-y-auto p-6 ${isDemo ? 'mt-8' : ''}`}>
 
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>
-            Buen día{user ? `, ${user.nombre.split(' ')[0]}` : ''} 👋
-          </h1>
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            {deudasQueDebo.length > 0
-              ? `${deudasQueDebo.length} deuda${deudasQueDebo.length > 1 ? 's' : ''} pendiente${deudasQueDebo.length > 1 ? 's' : ''}`
-              : 'Todo al día 🎉'
-            }
-          </p>
+        {/* Header con selector de idioma */}
+        <div className="flex items-start justify-between mb-6">
+          <div>
+            <h1 className="text-lg font-medium text-[#E8E0D5]">
+              {t('dash_greeting')}{user ? `, ${user.nombre.split(' ')[0]}` : ''} 👋
+            </h1>
+            <p className="text-sm text-[#4A6A7A]">
+              {deudasQueDebo.length > 0
+                ? `${deudasQueDebo.length} ${deudasQueDebo.length === 1 ? t('dash_debts_pending') : t('dash_debts_pending_plural')}`
+                : t('dash_all_good')
+              }
+            </p>
+          </div>
+
+          {/* Selector de idioma */}
+          <button
+            onClick={() => setLang(lang === 'es' ? 'en' : 'es')}
+            className="text-xs text-[#4A6A7A] hover:text-[#8A9BAA] transition border border-[#1E2D3D] px-2.5 py-1.5 rounded-lg"
+          >
+            {lang === 'es' ? 'EN' : 'ES'}
+          </button>
         </div>
 
         {/* ===== CARDS DE BALANCE ===== */}
         <div className="grid grid-cols-3 gap-3 mb-6">
 
-          {/* Lo que debés */}
           <button
             onClick={() => setActiveModal('debo')}
-            className="rounded-xl p-4 text-left transition"
-            style={{ background: 'var(--bg-card)', border: '1px solid var(--bg-border)' }}
+            className="bg-[#172130] border border-[#1E2D3D] rounded-xl p-4 text-left hover:border-[#C0675A] transition"
           >
-            <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Lo que debés</p>
-            <p className="text-2xl font-medium" style={{ color: 'var(--color-negative)' }}>
-              {formatMonto(totalDebo)}
-            </p>
-            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-              {deudasQueDebo.length} deuda{deudasQueDebo.length !== 1 ? 's' : ''}
+            <p className="text-xs text-[#4A6A7A] mb-1">{t('dash_owe')}</p>
+            <p className="text-2xl font-medium text-[#C0675A]">{formatMonto(totalDebo)}</p>
+            <p className="text-xs text-[#4A6A7A] mt-1">
+              {deudasQueDebo.length} {deudasQueDebo.length === 1 ? t('dash_debts') : t('dash_debts_plural')}
             </p>
           </button>
 
-          {/* Te deben */}
           <button
             onClick={() => setActiveModal('meDeban')}
-            className="rounded-xl p-4 text-left transition"
-            style={{ background: 'var(--bg-card)', border: '1px solid var(--bg-border)' }}
+            className="bg-[#172130] border border-[#1E2D3D] rounded-xl p-4 text-left hover:border-[#3D8B7A] transition"
           >
-            <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Te deben</p>
-            <p className="text-2xl font-medium" style={{ color: 'var(--color-positive)' }}>
-              {formatMonto(totalMeDeben)}
-            </p>
-            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-              {deudasQueMeDeben.length} persona{deudasQueMeDeben.length !== 1 ? 's' : ''}
+            <p className="text-xs text-[#4A6A7A] mb-1">{t('dash_owed')}</p>
+            <p className="text-2xl font-medium text-[#3D8B7A]">{formatMonto(totalMeDeben)}</p>
+            <p className="text-xs text-[#4A6A7A] mt-1">
+              {deudasQueMeDeben.length} {deudasQueMeDeben.length === 1 ? t('dash_people') : t('dash_people_plural')}
             </p>
           </button>
 
-          {/* Balance neto */}
-          <div
-            className="rounded-xl p-4"
-            style={{ background: 'var(--bg-card)', border: '1px solid var(--bg-border)' }}
-          >
-            <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Balance neto</p>
-            <p
-              className="text-2xl font-medium"
-              style={{ color: balanceNeto >= 0 ? 'var(--color-positive)' : 'var(--color-negative)' }}
-            >
+          <div className="bg-[#172130] border border-[#1E2D3D] rounded-xl p-4">
+            <p className="text-xs text-[#4A6A7A] mb-1">{t('dash_balance')}</p>
+            <p className={`text-2xl font-medium ${balanceNeto >= 0 ? 'text-[#3D8B7A]' : 'text-[#C0675A]'}`}>
               {balanceNeto >= 0 ? '+' : ''}{formatMonto(balanceNeto)}
             </p>
-            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>general</p>
+            <p className="text-xs text-[#4A6A7A] mt-1">{t('dash_general')}</p>
           </div>
 
         </div>
 
         {/* ===== ÚLTIMOS MOVIMIENTOS ===== */}
-        <h2 className="text-sm font-medium mb-3" style={{ color: 'var(--text-primary)' }}>
-          Últimos movimientos
-        </h2>
+        <h2 className="text-sm font-medium text-[#E8E0D5] mb-3">{t('dash_movements')}</h2>
         <div className="flex flex-col gap-2">
           {gastos.length === 0 && (
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              Todavía no hay gastos registrados.
-            </p>
+            <p className="text-sm text-[#4A6A7A]">{t('dash_no_movements')}</p>
           )}
           {gastos.map((gasto) => {
             const yoPague = gasto.pagado_por === userId
             return (
               <div
                 key={gasto.id}
-                className="rounded-xl px-4 py-3 flex items-center gap-3"
-                style={{ background: 'var(--bg-card)', border: '1px solid var(--bg-border)' }}
+                className="bg-[#172130] border border-[#1E2D3D] rounded-xl px-4 py-3 flex items-center gap-3"
               >
-                <div
-                  className="w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0"
-                  style={{ background: 'var(--bg-border)' }}
-                >
+                <div className="w-9 h-9 rounded-lg bg-[#1E2D3D] flex items-center justify-center text-lg flex-shrink-0">
                   💳
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>
+                  <p className="text-sm text-[#E8E0D5] truncate">
                     {gasto.descripcion}
                     {gasto.grupos && (
-                      <span style={{ color: 'var(--text-muted)' }}> · {gasto.grupos.nombre}</span>
+                      <span className="text-[#4A6A7A]"> · {gasto.grupos.nombre}</span>
                     )}
                   </p>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                    {yoPague ? 'Pagaste vos' : `Pagó ${gasto.pagador?.nombre}`} · {formatFecha(gasto.fecha)}
+                  <p className="text-xs text-[#4A6A7A]">
+                    {yoPague ? t('dash_you_paid') : `${t('dash_paid')} ${gasto.pagador?.nombre}`} · {formatFecha(gasto.fecha)}
                   </p>
                 </div>
-                <span
-                  className="text-sm font-medium"
-                  style={{ color: yoPague ? 'var(--color-positive)' : 'var(--color-negative)' }}
-                >
+                <span className={`text-sm font-medium ${yoPague ? 'text-[#3D8B7A]' : 'text-[#C0675A]'}`}>
                   {yoPague ? '+' : '-'}{formatMonto(gasto.monto)}
                 </span>
               </div>
             )
           })}
         </div>
-
       </main>
 
       {/* ===== MODAL — Lo que debés ===== */}
       {activeModal === 'debo' && (
         <div
-          className="fixed inset-0 flex items-center justify-center z-50"
-          style={{ background: 'rgba(0,0,0,0.6)' }}
+          className="fixed inset-0 flex items-center justify-center z-50 bg-black/60"
           onClick={() => setActiveModal(null)}
         >
           <div
-            className="rounded-2xl p-6 w-full max-w-sm mx-4"
-            style={{ background: 'var(--bg-card)', border: '1px solid var(--bg-border)' }}
+            className="bg-[#172130] border border-[#1E2D3D] rounded-2xl p-6 w-full max-w-sm mx-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-medium" style={{ color: 'var(--text-primary)' }}>Lo que debés</h3>
-              <button onClick={() => setActiveModal(null)} style={{ color: 'var(--text-muted)' }}>✕</button>
+              <h3 className="text-base font-medium text-[#E8E0D5]">{t('modal_owe_title')}</h3>
+              <button onClick={() => setActiveModal(null)} className="text-[#4A6A7A] hover:text-[#8A9BAA]">✕</button>
             </div>
             {deudasQueDebo.length === 0 && (
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No debés nada 🎉</p>
+              <p className="text-sm text-[#4A6A7A]">{t('modal_no_debts')}</p>
             )}
             <div className="flex flex-col gap-3">
               {deudasQueDebo.map((deuda) => (
-                <div
-                  key={deuda.id}
-                  className="flex items-center justify-between py-2"
-                  style={{ borderBottom: '1px solid var(--bg-border)' }}
-                >
+                <div key={deuda.id} className="flex items-center justify-between py-2 border-b border-[#1E2D3D]">
                   <div>
-                    <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                      {deuda.acreedor?.nombre}
-                    </p>
-                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    <p className="text-sm font-medium text-[#E8E0D5]">{deuda.acreedor?.nombre}</p>
+                    <p className="text-xs text-[#4A6A7A]">
                       {deuda.gastos?.descripcion}
                       {deuda.gastos?.grupos && ` · ${deuda.gastos.grupos.nombre}`}
                     </p>
                   </div>
-                  <span className="text-sm font-medium" style={{ color: 'var(--color-negative)' }}>
-                    {formatMonto(deuda.monto)}
-                  </span>
+                  <span className="text-sm font-medium text-[#C0675A]">{formatMonto(deuda.monto)}</span>
                 </div>
               ))}
             </div>
             {deudasQueDebo.length > 0 && (
-              <p className="text-xs text-right mt-4" style={{ color: 'var(--text-muted)' }}>
-                Total: {formatMonto(totalDebo)}
+              <p className="text-xs text-right mt-4 text-[#4A6A7A]">
+                {t('modal_total')}: {formatMonto(totalDebo)}
               </p>
             )}
           </div>
@@ -467,47 +501,37 @@ export default function DashboardPage() {
       {/* ===== MODAL — Te deben ===== */}
       {activeModal === 'meDeban' && (
         <div
-          className="fixed inset-0 flex items-center justify-center z-50"
-          style={{ background: 'rgba(0,0,0,0.6)' }}
+          className="fixed inset-0 flex items-center justify-center z-50 bg-black/60"
           onClick={() => setActiveModal(null)}
         >
           <div
-            className="rounded-2xl p-6 w-full max-w-sm mx-4"
-            style={{ background: 'var(--bg-card)', border: '1px solid var(--bg-border)' }}
+            className="bg-[#172130] border border-[#1E2D3D] rounded-2xl p-6 w-full max-w-sm mx-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-medium" style={{ color: 'var(--text-primary)' }}>Te deben</h3>
-              <button onClick={() => setActiveModal(null)} style={{ color: 'var(--text-muted)' }}>✕</button>
+              <h3 className="text-base font-medium text-[#E8E0D5]">{t('modal_owed_title')}</h3>
+              <button onClick={() => setActiveModal(null)} className="text-[#4A6A7A] hover:text-[#8A9BAA]">✕</button>
             </div>
             {deudasQueMeDeben.length === 0 && (
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Nadie te debe nada.</p>
+              <p className="text-sm text-[#4A6A7A]">{t('modal_nobody_owes')}</p>
             )}
             <div className="flex flex-col gap-3">
               {deudasQueMeDeben.map((deuda) => (
-                <div
-                  key={deuda.id}
-                  className="flex items-center justify-between py-2"
-                  style={{ borderBottom: '1px solid var(--bg-border)' }}
-                >
+                <div key={deuda.id} className="flex items-center justify-between py-2 border-b border-[#1E2D3D]">
                   <div>
-                    <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                      {deuda.deudor?.nombre}
-                    </p>
-                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    <p className="text-sm font-medium text-[#E8E0D5]">{deuda.deudor?.nombre}</p>
+                    <p className="text-xs text-[#4A6A7A]">
                       {deuda.gastos?.descripcion}
                       {deuda.gastos?.grupos && ` · ${deuda.gastos.grupos.nombre}`}
                     </p>
                   </div>
-                  <span className="text-sm font-medium" style={{ color: 'var(--color-positive)' }}>
-                    {formatMonto(deuda.monto)}
-                  </span>
+                  <span className="text-sm font-medium text-[#3D8B7A]">{formatMonto(deuda.monto)}</span>
                 </div>
               ))}
             </div>
             {deudasQueMeDeben.length > 0 && (
-              <p className="text-xs text-right mt-4" style={{ color: 'var(--text-muted)' }}>
-                Total: {formatMonto(totalMeDeben)}
+              <p className="text-xs text-right mt-4 text-[#4A6A7A]">
+                {t('modal_total')}: {formatMonto(totalMeDeben)}
               </p>
             )}
           </div>

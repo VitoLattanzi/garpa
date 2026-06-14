@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Geist } from 'next/font/google'
 import './globals.css'
-import Footer from '@/components/Footer'
+import { LangProvider } from '@/context/LangContext'
 
 /**
  * Fuente principal de la app
@@ -14,7 +14,6 @@ const geist = Geist({
 
 /**
  * Metadata global de la app
- * Aparece en la pestaña del navegador y en resultados de búsqueda
  */
 export const metadata: Metadata = {
   title: 'Garpa — Split expenses, simplify debts',
@@ -23,7 +22,7 @@ export const metadata: Metadata = {
 
 /**
  * Layout raíz — envuelve TODAS las páginas de la app
- * Todo lo que pongas acá aparece en todas las páginas
+ * LangProvider da acceso al contexto de idioma en toda la app
  */
 export default function RootLayout({
   children,
@@ -32,11 +31,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body className={`${geist.variable} font-sans antialiased bg-gray-50 min-h-screen flex flex-col`}>
-        <main className="flex-1">
+      <body className={`${geist.variable} font-sans antialiased`}>
+        <LangProvider>
           {children}
-        </main>
-        
+        </LangProvider>
       </body>
     </html>
   )
