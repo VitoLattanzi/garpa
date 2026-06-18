@@ -60,7 +60,7 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
       .from('usuarios')
       .select('id, nombre, email')
       .eq('email', email.trim().toLowerCase())
-      .single()
+      .maybeSingle()
 
     if (usuario) {
       if (usuario.id === userId) {
@@ -74,7 +74,7 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
         .from('amistades')
         .select('id')
         .or(`and(usuario_id.eq.${userId},amigo_id.eq.${usuario.id}),and(usuario_id.eq.${usuario.id},amigo_id.eq.${userId})`)
-        .single()
+        .maybeSingle()
 
       if (amistad) {
         setError(lang === 'es' ? 'Ya son amigos o hay una solicitud pendiente' : 'Already friends or request pending')
@@ -131,7 +131,7 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
       .select('id')
       .eq('invitado_por', userId)
       .eq('email_invitado', email.trim().toLowerCase())
-      .single()
+      .maybeSingle()
 
     if (invExistente) {
       setError(lang === 'es'
@@ -157,11 +157,12 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
     }
 
     // Mandamos el email de invitación via Supabase Auth
-    await supabase.auth.signInWithOtp({
+    await supabase.auth.signUp({
       email: email.trim().toLowerCase(),
+      password: Math.random().toString(36).slice(-10), // password temporal
       options: {
         emailRedirectTo: `${window.location.origin}/register`,
-        shouldCreateUser: false,
+        data: { invitado: true }
       },
     })
 

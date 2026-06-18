@@ -10,7 +10,6 @@ import ModalNuevoGrupo from '@/components/ModalNuevoGrupo'
 import ModalNuevoGasto from '@/components/ModalNuevoGasto'
 import ModalAgregarAmigo from '@/components/ModalAgregarAmigo'
 
-// Datos mockeados para el modo demo
 const DEMO_USER_ID = 'demo-user'
 const DEMO_GRUPOS: Grupo[] = [
   { id: '1', nombre: 'Viaje a Brasil' },
@@ -34,11 +33,6 @@ const DEMO_GASTOS_INICIALES: Gasto[] = [
   { id: '3', descripcion: 'Bar El Federal', monto: 5400, fecha: new Date(Date.now() - 5 * 86400000).toISOString(), pagado_por: 'maria', grupo_id: '3', grupos: { nombre: 'Salidas' }, pagador: { nombre: 'María López' } },
 ]
 
-/**
- * Dashboard principal de Garpa
- * Soporta modo demo (cookie garpa-demo=true) con datos en sessionStorage
- * En modo real trae todos los datos desde Supabase
- */
 export default function DashboardPage() {
   const router = useRouter()
   const supabase = createSupabaseBrowserClient()
@@ -62,20 +56,15 @@ export default function DashboardPage() {
       setIsDemo(demoActivo)
 
       if (demoActivo) {
-        // Modo demo — cargamos datos de sessionStorage o los iniciales
         setUser({ nombre: 'Usuario Demo', email: 'demo@garpa.app' })
         setUserId(DEMO_USER_ID)
         setAmigos(DEMO_AMIGOS)
-
         const gruposGuardados = sessionStorage.getItem('demo-grupos')
         setGrupos(gruposGuardados ? [...DEMO_GRUPOS, ...JSON.parse(gruposGuardados)] : DEMO_GRUPOS)
-
         const deudasGuardadas = sessionStorage.getItem('demo-deudas')
         setDeudas(deudasGuardadas ? [...DEMO_DEUDAS_INICIALES, ...JSON.parse(deudasGuardadas)] : DEMO_DEUDAS_INICIALES)
-
         const gastosGuardados = sessionStorage.getItem('demo-gastos')
         setGastos(gastosGuardados ? [...JSON.parse(gastosGuardados), ...DEMO_GASTOS_INICIALES] : DEMO_GASTOS_INICIALES)
-
         setLoading(false)
         return
       }
@@ -83,51 +72,101 @@ export default function DashboardPage() {
       // Modo real
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return router.push('/login')
-
       const uid = session.user.id
       setUserId(uid)
 
+      // Perfil
       const { data: perfil } = await supabase
-        .from('usuarios')
-        .select('nombre, email')
-        .eq('id', uid)
-        .single()
+        .from('usuarios').select('nombre, email').eq('id', uid).single()
       if (perfil) setUser(perfil)
 
-      const { data: miembros } = await supabase
-        .from('miembros_grupo')
-        .select('grupos(id, nombre)')
-        .eq('usuario_id', uid)
-      if (miembros) {
-        setGrupos(miembros.map((m: any) => m.grupos).filter(Boolean))
-      }
-
+      // Amigos
       const { data: amistadesData } = await supabase
         .from('amistades')
         .select('id, usuario_id, amigo_id, estado, perfil:usuarios!amistades_amigo_id_fkey(nombre, email)')
-        .eq('usuario_id', uid)
-        .eq('estado', 'activo')
+        .eq('usuario_id', uid).eq('estado', 'activo')
       if (amistadesData) setAmigos(amistadesData as any)
 
+      // Grupos — query simplificada sin joins
+      const { data: miembrosData } = await supabase
+        .from('miembros_grupo').select('grupo_id').eq('usuario_id', uid)
+      if (miembrosData && miembrosData.length > 0) {
+        const grupoIds = miembrosData.map((m: any) => m.grupo_id)
+        const { data: gruposData } = await supabase
+          .from('grupos').select('id, nombre').in('id', grupoIds)
+        if (gruposData) setGrupos(gruposData)
+      }
+
+      // Deudas — queries separadas en lugar de joins anidados
       const { data: deudasData } = await supabase
         .from('deudas')
-        .select(`
-          id, monto, saldado, acreedor_id, deudor_id,
-          gastos(descripcion, grupos(nombre)),
-          acreedor:usuarios!deudas_acreedor_id_fkey(nombre),
-          deudor:usuarios!deudas_deudor_id_fkey(nombre)
-        `)
+        .select('id, monto, saldado, acreedor_id, deudor_id, gasto_id, grupo_id')
         .or(`deudor_id.eq.${uid},acreedor_id.eq.${uid}`)
         .eq('saldado', false)
-      if (deudasData) setDeudas(deudasData as any)
 
-      const { data: gastosData } = await supabase
-        .from('participantes_gasto')
-        .select(`gastos(id, descripcion, monto, fecha, pagado_por, grupo_id, grupos(nombre), pagador:usuarios!gastos_pagado_por_fkey(nombre))`)
-        .eq('usuario_id', uid)
-        .limit(5)
-      if (gastosData) {
-        setGastos(gastosData.map((p: any) => p.gastos).filter(Boolean))
+      if (deudasData && deudasData.length > 0) {
+        const userIds = [...new Set([
+          ...deudasData.map((d: any) => d.acreedor_id),
+          ...deudasData.map((d: any) => d.deudor_id),
+        ])]
+        const { data: usuariosData } = await supabase
+          .from('usuarios').select('id, nombre').in('id', userIds)
+
+        const gastoIds = deudasData.map((d: any) => d.gasto_id).filter(Boolean)
+        const { data: gastosRef } = gastoIds.length > 0
+          ? await supabase.from('gastos').select('id, descripcion, grupo_id').in('id', gastoIds)
+          : { data: [] }
+
+        const grupoIdsDeudas = (gastosRef ?? []).map((g: any) => g.grupo_id).filter(Boolean)
+        const { data: gruposRef } = grupoIdsDeudas.length > 0
+          ? await supabase.from('grupos').select('id, nombre').in('id', grupoIdsDeudas)
+          : { data: [] }
+
+        const deudasEnsambladas = deudasData.map((d: any) => ({
+          ...d,
+          acreedor: { nombre: usuariosData?.find((u: any) => u.id === d.acreedor_id)?.nombre ?? '' },
+          deudor: { nombre: usuariosData?.find((u: any) => u.id === d.deudor_id)?.nombre ?? '' },
+          gastos: {
+            descripcion: gastosRef?.find((g: any) => g.id === d.gasto_id)?.descripcion ?? '',
+            grupos: (() => {
+              const gasto = gastosRef?.find((g: any) => g.id === d.gasto_id)
+              const grupo = gruposRef?.find((g: any) => g.id === gasto?.grupo_id)
+              return grupo ? { nombre: grupo.nombre } : null
+            })(),
+          },
+        }))
+        setDeudas(deudasEnsambladas as any)
+      }
+
+      // Gastos recientes — queries separadas
+      const { data: partData } = await supabase
+        .from('participantes_gasto').select('gasto_id').eq('usuario_id', uid).limit(5)
+
+      if (partData && partData.length > 0) {
+        const gastoIds = partData.map((p: any) => p.gasto_id)
+        const { data: gastosData } = await supabase
+          .from('gastos')
+          .select('id, descripcion, monto, fecha, pagado_por, grupo_id')
+          .in('id', gastoIds)
+          .order('fecha', { ascending: false })
+
+        if (gastosData) {
+          const pagadorIds = [...new Set(gastosData.map((g: any) => g.pagado_por))]
+          const { data: pagadoresData } = await supabase
+            .from('usuarios').select('id, nombre').in('id', pagadorIds)
+
+          const grupoIdsGastos = gastosData.map((g: any) => g.grupo_id).filter(Boolean)
+          const { data: gruposGastos } = grupoIdsGastos.length > 0
+            ? await supabase.from('grupos').select('id, nombre').in('id', grupoIdsGastos)
+            : { data: [] }
+
+          const gastosEnsamblados = gastosData.map((g: any) => ({
+            ...g,
+            pagador: { nombre: pagadoresData?.find((p: any) => p.id === g.pagado_por)?.nombre ?? '' },
+            grupos: gruposGastos?.find((gr: any) => gr.id === g.grupo_id) ?? null,
+          }))
+          setGastos(gastosEnsamblados as any)
+        }
       }
 
       setLoading(false)
@@ -136,7 +175,6 @@ export default function DashboardPage() {
     cargarDatos()
   }, [])
 
-  // Recarga los datos después de crear algo
   async function recargar() {
     if (isDemo) {
       const gruposGuardados = sessionStorage.getItem('demo-grupos')
@@ -148,30 +186,53 @@ export default function DashboardPage() {
       setActiveModal(null)
       return
     }
-
-    // Recarga real desde Supabase
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return
     const uid = session.user.id
 
     const { data: deudasData } = await supabase
       .from('deudas')
-      .select(`id, monto, saldado, acreedor_id, deudor_id, gastos(descripcion, grupos(nombre)), acreedor:usuarios!deudas_acreedor_id_fkey(nombre), deudor:usuarios!deudas_deudor_id_fkey(nombre)`)
+      .select('id, monto, saldado, acreedor_id, deudor_id, gasto_id, grupo_id')
       .or(`deudor_id.eq.${uid},acreedor_id.eq.${uid}`)
       .eq('saldado', false)
-    if (deudasData) setDeudas(deudasData as any)
 
-    const { data: gastosData } = await supabase
-      .from('participantes_gasto')
-      .select(`gastos(id, descripcion, monto, fecha, pagado_por, grupo_id, grupos(nombre), pagador:usuarios!gastos_pagado_por_fkey(nombre))`)
-      .eq('usuario_id', uid)
-      .limit(5)
-    if (gastosData) setGastos(gastosData.map((p: any) => p.gastos).filter(Boolean))
+    if (deudasData && deudasData.length > 0) {
+      const userIds = [...new Set([...deudasData.map((d: any) => d.acreedor_id), ...deudasData.map((d: any) => d.deudor_id)])]
+      const { data: usuariosData } = await supabase.from('usuarios').select('id, nombre').in('id', userIds)
+      const gastoIds = deudasData.map((d: any) => d.gasto_id).filter(Boolean)
+      const { data: gastosRef } = gastoIds.length > 0 ? await supabase.from('gastos').select('id, descripcion, grupo_id').in('id', gastoIds) : { data: [] }
+      const grupoIdsDeudas = (gastosRef ?? []).map((g: any) => g.grupo_id).filter(Boolean)
+      const { data: gruposRef } = grupoIdsDeudas.length > 0 ? await supabase.from('grupos').select('id, nombre').in('id', grupoIdsDeudas) : { data: [] }
+      setDeudas(deudasData.map((d: any) => ({
+        ...d,
+        acreedor: { nombre: usuariosData?.find((u: any) => u.id === d.acreedor_id)?.nombre ?? '' },
+        deudor: { nombre: usuariosData?.find((u: any) => u.id === d.deudor_id)?.nombre ?? '' },
+        gastos: {
+          descripcion: gastosRef?.find((g: any) => g.id === d.gasto_id)?.descripcion ?? '',
+          grupos: (() => { const gasto = gastosRef?.find((g: any) => g.id === d.gasto_id); const grupo = gruposRef?.find((g: any) => g.id === gasto?.grupo_id); return grupo ? { nombre: grupo.nombre } : null })(),
+        },
+      })) as any)
+    } else {
+      setDeudas([])
+    }
 
+    const { data: partData } = await supabase.from('participantes_gasto').select('gasto_id').eq('usuario_id', uid).limit(5)
+    if (partData && partData.length > 0) {
+      const gastoIds = partData.map((p: any) => p.gasto_id)
+      const { data: gastosData } = await supabase.from('gastos').select('id, descripcion, monto, fecha, pagado_por, grupo_id').in('id', gastoIds).order('fecha', { ascending: false })
+      if (gastosData) {
+        const pagadorIds = [...new Set(gastosData.map((g: any) => g.pagado_por))]
+        const { data: pagadoresData } = await supabase.from('usuarios').select('id, nombre').in('id', pagadorIds)
+        const grupoIdsGastos = gastosData.map((g: any) => g.grupo_id).filter(Boolean)
+        const { data: gruposGastos } = grupoIdsGastos.length > 0 ? await supabase.from('grupos').select('id, nombre').in('id', grupoIdsGastos) : { data: [] }
+        setGastos(gastosData.map((g: any) => ({ ...g, pagador: { nombre: pagadoresData?.find((p: any) => p.id === g.pagado_por)?.nombre ?? '' }, grupos: gruposGastos?.find((gr: any) => gr.id === g.grupo_id) ?? null })) as any)
+      }
+    } else {
+      setGastos([])
+    }
     setActiveModal(null)
   }
 
-  // Agrega un grupo nuevo al estado
   function onGrupoCreado(grupo: Grupo) {
     if (isDemo) {
       const prev = JSON.parse(sessionStorage.getItem('demo-grupos') || '[]')
@@ -181,23 +242,18 @@ export default function DashboardPage() {
     setActiveModal(null)
   }
 
-  // Agrega un amigo nuevo al estado
   function onAmigoAgregado(amigo: { id: string; nombre: string; email: string }) {
     const nuevoAmigo: Amigo = {
-      id: amigo.id,
-      usuario_id: userId!,
-      amigo_id: amigo.id,
-      estado: 'activo',
+      id: amigo.id, usuario_id: userId!, amigo_id: amigo.id, estado: 'activo',
       perfil: { nombre: amigo.nombre, email: amigo.email },
     }
     setAmigos(prev => [...prev, nuevoAmigo])
     setActiveModal(null)
   }
 
-  // Marca una deuda como saldada
   async function saldarDeuda(deudaId: string) {
     if (isDemo) {
-      setDeudas(prev => prev.map(d => d.id === deudaId ? { ...d, saldado: true } : d).filter(d => !d.saldado))
+      setDeudas(prev => prev.filter(d => d.id !== deudaId))
       return
     }
     await supabase.from('deudas').update({ saldado: true }).eq('id', deudaId)
@@ -246,7 +302,6 @@ export default function DashboardPage() {
   return (
     <div className="flex h-screen overflow-hidden bg-[#0F1923]">
 
-      {/* ===== BANNER DEMO ===== */}
       {isDemo && (
         <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center gap-4 py-2 bg-[#3D8B7A] text-[#0F1923] text-xs font-medium">
           <span>{t('demo_banner')}</span>
@@ -254,23 +309,16 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* ===== SIDEBAR ===== */}
       <aside className={`${sidebarOpen ? 'w-56' : 'w-14'} ${isDemo ? 'mt-8' : ''} flex flex-col flex-shrink-0 transition-all duration-250 overflow-hidden bg-[#172130] border-r border-[#1E2D3D]`}>
-
-        {/* Logo + toggle */}
         <div className="flex items-center justify-between px-3 py-3 border-b border-[#1E2D3D]">
           {sidebarOpen && <span className="text-base font-medium text-[#E8E0D5]">garpa</span>}
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="flex items-center justify-center w-7 h-7 rounded-lg text-[#4A6A7A] hover:text-[#8A9BAA] transition ml-auto"
-          >
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="flex items-center justify-center w-7 h-7 rounded-lg text-[#4A6A7A] hover:text-[#8A9BAA] transition ml-auto">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               {sidebarOpen ? <path d="M11 19l-7-7 7-7M19 19l-7-7 7-7" /> : <path d="M13 5l7 7-7 7M5 5l7 7-7 7" />}
             </svg>
           </button>
         </div>
 
-        {/* Navegación */}
         <nav className="flex flex-col gap-0.5 px-2 py-3">
           {sidebarOpen && <span className="text-xs text-[#4A6A7A] px-2 pb-1">{t('dash_menu')}</span>}
           {[
@@ -279,70 +327,42 @@ export default function DashboardPage() {
             { icon: '💳', label: t('dash_expenses'), href: '/gastos', active: false },
             { icon: '⚙️', label: t('dash_settings'), href: '/configuracion', active: false },
           ].map(item => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition w-full ${item.active ? 'bg-[#1E2D3D] text-[#E8E0D5] font-medium' : 'text-[#8A9BAA] hover:bg-[#1E2D3D]'}`}
-            >
+            <Link key={item.href} href={item.href} className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition w-full ${item.active ? 'bg-[#1E2D3D] text-[#E8E0D5] font-medium' : 'text-[#8A9BAA] hover:bg-[#1E2D3D]'}`}>
               <span className="text-base flex-shrink-0">{item.icon}</span>
               {sidebarOpen && <span className="truncate">{item.label}</span>}
             </Link>
           ))}
         </nav>
 
-        {/* Mis grupos — colapsable */}
         <div className="flex flex-col px-2 flex-1 overflow-hidden">
           {sidebarOpen && (
-            <button
-              onClick={() => setGruposExpanded(!gruposExpanded)}
-              className="flex items-center justify-between px-2 pb-1 w-full text-left"
-            >
+            <button onClick={() => setGruposExpanded(!gruposExpanded)} className="flex items-center justify-between px-2 pb-1 w-full text-left">
               <span className="text-xs text-[#4A6A7A]">{t('dash_groups')}</span>
               <span className="text-xs text-[#4A6A7A]">{gruposExpanded ? '▲' : '▼'}</span>
             </button>
           )}
           {gruposExpanded && (
             <div className="flex flex-col gap-0.5 overflow-y-auto max-h-40">
-              {grupos.length === 0 && sidebarOpen && (
-                <p className="text-xs px-2 py-1 text-[#4A6A7A]">{t('dash_no_groups')}</p>
-              )}
+              {grupos.length === 0 && sidebarOpen && <p className="text-xs px-2 py-1 text-[#4A6A7A]">{t('dash_no_groups')}</p>}
               {grupos.map(grupo => (
-                <button
-                  key={grupo.id}
-                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[#1E2D3D] transition w-full text-left"
-                >
+                <button key={grupo.id} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[#1E2D3D] transition w-full text-left">
                   <div className="w-2 h-2 rounded-full flex-shrink-0 bg-[#3D8B7A]" />
                   {sidebarOpen && <span className="text-sm text-[#8A9BAA] truncate">{grupo.nombre}</span>}
                 </button>
               ))}
             </div>
           )}
-
-          {/* Nuevo grupo — siempre visible */}
-          <button
-            onClick={() => setActiveModal('nuevoGrupo')}
-            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[#1E2D3D] transition w-full text-left mt-1 text-[#2A6496]"
-          >
+          <button onClick={() => setActiveModal('nuevoGrupo')} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[#1E2D3D] transition w-full text-left mt-1 text-[#2A6496]">
             <span className="text-base flex-shrink-0">＋</span>
             {sidebarOpen && <span className="text-sm truncate">{t('dash_new_group')}</span>}
           </button>
-
-          {/* Agregar amigo */}
-          <button
-            onClick={() => setActiveModal('agregarAmigo')}
-            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[#1E2D3D] transition w-full text-left text-[#2A6496]"
-          >
+          <button onClick={() => setActiveModal('agregarAmigo')} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[#1E2D3D] transition w-full text-left text-[#2A6496]">
             <span className="text-base flex-shrink-0">👤</span>
             {sidebarOpen && <span className="text-sm truncate">{lang === 'es' ? 'Agregar amigo' : 'Add friend'}</span>}
           </button>
         </div>
 
-        {/* Perfil abajo */}
-        <div
-          className="flex items-center gap-2.5 px-3 py-3 border-t border-[#1E2D3D] cursor-pointer hover:bg-[#1E2D3D] transition"
-          onClick={handleLogout}
-          title={t('dash_logout')}
-        >
+        <div className="flex items-center gap-2.5 px-3 py-3 border-t border-[#1E2D3D] cursor-pointer hover:bg-[#1E2D3D] transition" onClick={handleLogout} title={t('dash_logout')}>
           <div className="w-8 h-8 rounded-full bg-[#1E2D3D] flex items-center justify-center text-xs font-medium text-[#3D8B7A] flex-shrink-0">
             {user ? getInitials(user.nombre) : '??'}
           </div>
@@ -355,10 +375,7 @@ export default function DashboardPage() {
         </div>
       </aside>
 
-      {/* ===== CONTENIDO PRINCIPAL ===== */}
       <main className={`flex-1 overflow-y-auto p-6 ${isDemo ? 'mt-8' : ''}`}>
-
-        {/* Header */}
         <div className="flex items-start justify-between mb-6">
           <div>
             <h1 className="text-lg font-medium text-[#E8E0D5]">
@@ -367,48 +384,30 @@ export default function DashboardPage() {
             <p className="text-sm text-[#4A6A7A]">
               {deudasQueDebo.length > 0
                 ? `${deudasQueDebo.length} ${deudasQueDebo.length === 1 ? t('dash_debts_pending') : t('dash_debts_pending_plural')}`
-                : t('dash_all_good')
-              }
+                : t('dash_all_good')}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {/* Botón nuevo gasto */}
-            <button
-              onClick={() => setActiveModal('nuevoGasto')}
-              className="text-xs bg-[#3D8B7A] text-[#0F1923] font-medium px-3 py-1.5 rounded-lg hover:opacity-90 transition"
-            >
+            <button onClick={() => setActiveModal('nuevoGasto')} className="text-xs bg-[#3D8B7A] text-[#0F1923] font-medium px-3 py-1.5 rounded-lg hover:opacity-90 transition">
               {lang === 'es' ? '+ Nuevo gasto' : '+ New expense'}
             </button>
-            {/* Selector de idioma */}
-            <button
-              onClick={() => setLang(lang === 'es' ? 'en' : 'es')}
-              className="text-xs text-[#4A6A7A] hover:text-[#8A9BAA] transition border border-[#1E2D3D] px-2.5 py-1.5 rounded-lg"
-            >
+            <button onClick={() => setLang(lang === 'es' ? 'en' : 'es')} className="text-xs text-[#4A6A7A] hover:text-[#8A9BAA] transition border border-[#1E2D3D] px-2.5 py-1.5 rounded-lg">
               {lang === 'es' ? 'EN' : 'ES'}
             </button>
           </div>
         </div>
 
-        {/* ===== CARDS DE BALANCE ===== */}
         <div className="grid grid-cols-3 gap-3 mb-6">
-          <button
-            onClick={() => setActiveModal('debo')}
-            className="bg-[#172130] border border-[#1E2D3D] rounded-xl p-4 text-left hover:border-[#C0675A] transition"
-          >
+          <button onClick={() => setActiveModal('debo')} className="bg-[#172130] border border-[#1E2D3D] rounded-xl p-4 text-left hover:border-[#C0675A] transition">
             <p className="text-xs text-[#4A6A7A] mb-1">{t('dash_owe')}</p>
             <p className="text-2xl font-medium text-[#C0675A]">{formatMonto(totalDebo)}</p>
             <p className="text-xs text-[#4A6A7A] mt-1">{deudasQueDebo.length} {deudasQueDebo.length === 1 ? t('dash_debts') : t('dash_debts_plural')}</p>
           </button>
-
-          <button
-            onClick={() => setActiveModal('meDeban')}
-            className="bg-[#172130] border border-[#1E2D3D] rounded-xl p-4 text-left hover:border-[#3D8B7A] transition"
-          >
+          <button onClick={() => setActiveModal('meDeban')} className="bg-[#172130] border border-[#1E2D3D] rounded-xl p-4 text-left hover:border-[#3D8B7A] transition">
             <p className="text-xs text-[#4A6A7A] mb-1">{t('dash_owed')}</p>
             <p className="text-2xl font-medium text-[#3D8B7A]">{formatMonto(totalMeDeben)}</p>
             <p className="text-xs text-[#4A6A7A] mt-1">{deudasQueMeDeben.length} {deudasQueMeDeben.length === 1 ? t('dash_people') : t('dash_people_plural')}</p>
           </button>
-
           <div className="bg-[#172130] border border-[#1E2D3D] rounded-xl p-4">
             <p className="text-xs text-[#4A6A7A] mb-1">{t('dash_balance')}</p>
             <p className={`text-2xl font-medium ${balanceNeto >= 0 ? 'text-[#3D8B7A]' : 'text-[#C0675A]'}`}>
@@ -418,12 +417,9 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ===== ÚLTIMOS MOVIMIENTOS ===== */}
         <h2 className="text-sm font-medium text-[#E8E0D5] mb-3">{t('dash_movements')}</h2>
         <div className="flex flex-col gap-2">
-          {gastos.length === 0 && (
-            <p className="text-sm text-[#4A6A7A]">{t('dash_no_movements')}</p>
-          )}
+          {gastos.length === 0 && <p className="text-sm text-[#4A6A7A]">{t('dash_no_movements')}</p>}
           {gastos.map(gasto => {
             const yoPague = gasto.pagado_por === userId
             return (
@@ -447,7 +443,6 @@ export default function DashboardPage() {
         </div>
       </main>
 
-      {/* ===== MODAL — Lo que debés ===== */}
       {activeModal === 'debo' && (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/60" onClick={() => setActiveModal(null)}>
           <div className="bg-[#172130] border border-[#1E2D3D] rounded-2xl p-6 w-full max-w-sm mx-4" onClick={e => e.stopPropagation()}>
@@ -465,24 +460,18 @@ export default function DashboardPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-[#C0675A]">{formatMonto(deuda.monto)}</span>
-                    <button
-                      onClick={() => saldarDeuda(deuda.id)}
-                      className="text-xs border border-[#1E2D3D] text-[#4A6A7A] hover:text-[#3D8B7A] hover:border-[#3D8B7A] px-2 py-0.5 rounded-lg transition"
-                    >
+                    <button onClick={() => saldarDeuda(deuda.id)} className="text-xs border border-[#1E2D3D] text-[#4A6A7A] hover:text-[#3D8B7A] hover:border-[#3D8B7A] px-2 py-0.5 rounded-lg transition">
                       {lang === 'es' ? 'Saldar' : 'Settle'}
                     </button>
                   </div>
                 </div>
               ))}
             </div>
-            {deudasQueDebo.length > 0 && (
-              <p className="text-xs text-right mt-4 text-[#4A6A7A]">{t('modal_total')}: {formatMonto(totalDebo)}</p>
-            )}
+            {deudasQueDebo.length > 0 && <p className="text-xs text-right mt-4 text-[#4A6A7A]">{t('modal_total')}: {formatMonto(totalDebo)}</p>}
           </div>
         </div>
       )}
 
-      {/* ===== MODAL — Te deben ===== */}
       {activeModal === 'meDeban' && (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/60" onClick={() => setActiveModal(null)}>
           <div className="bg-[#172130] border border-[#1E2D3D] rounded-2xl p-6 w-full max-w-sm mx-4" onClick={e => e.stopPropagation()}>
@@ -502,42 +491,19 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
-            {deudasQueMeDeben.length > 0 && (
-              <p className="text-xs text-right mt-4 text-[#4A6A7A]">{t('modal_total')}: {formatMonto(totalMeDeben)}</p>
-            )}
+            {deudasQueMeDeben.length > 0 && <p className="text-xs text-right mt-4 text-[#4A6A7A]">{t('modal_total')}: {formatMonto(totalMeDeben)}</p>}
           </div>
         </div>
       )}
 
-      {/* ===== MODALES DE ACCIÓN ===== */}
       {activeModal === 'nuevoGrupo' && userId && (
-        <ModalNuevoGrupo
-          onClose={() => setActiveModal(null)}
-          onCreated={onGrupoCreado}
-          amigos={amigos}
-          userId={userId}
-          isDemo={isDemo}
-        />
+        <ModalNuevoGrupo onClose={() => setActiveModal(null)} onCreated={onGrupoCreado} amigos={amigos} userId={userId} isDemo={isDemo} />
       )}
-
       {activeModal === 'nuevoGasto' && userId && (
-        <ModalNuevoGasto
-          onClose={() => setActiveModal(null)}
-          onCreated={recargar}
-          grupos={grupos}
-          amigos={amigos}
-          userId={userId}
-          isDemo={isDemo}
-        />
+        <ModalNuevoGasto onClose={() => setActiveModal(null)} onCreated={recargar} grupos={grupos} amigos={amigos} userId={userId} isDemo={isDemo} />
       )}
-
       {activeModal === 'agregarAmigo' && userId && (
-        <ModalAgregarAmigo
-          onClose={() => setActiveModal(null)}
-          onAdded={onAmigoAgregado}
-          userId={userId}
-          isDemo={isDemo}
-        />
+        <ModalAgregarAmigo onClose={() => setActiveModal(null)} onAdded={onAmigoAgregado} userId={userId} isDemo={isDemo} />
       )}
 
     </div>
