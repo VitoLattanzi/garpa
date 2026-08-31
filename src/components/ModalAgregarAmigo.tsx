@@ -316,3 +316,4 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
     </div>
   )
 } 
+
