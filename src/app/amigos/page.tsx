@@ -13,6 +13,9 @@ export default function AmigosPage() {
   const [amigos, setAmigos] = useState<any[]>([]) // Simplificado para visualización
   const [myUserId, setMyUserId] = useState<string | null>(null)
 
+  const [invitaciones, setInvitaciones] = useState<any[]>([])
+  const [cooldown, setCooldown] = useState<Record<string, number>>({})
+
   useEffect(() => {
     async function fetchData() {
       const { data: { user } } = await supabase.auth.getUser()
@@ -30,7 +33,13 @@ export default function AmigosPage() {
         .eq('usuario_id', user.id)
         .eq('estado', 'activo')
 
-      // 2. Fetch deudas
+      // 2. Fetch invitaciones
+      const { data: rawInvitaciones } = await supabase
+        .from('invitaciones')
+        .select('*')
+        .eq('invitado_por', user.id)
+
+      // 3. Fetch deudas
       const { data: deudas } = await supabase
         .from('deudas')
         .select('*')
@@ -53,10 +62,26 @@ export default function AmigosPage() {
         amigosConBalance.sort((a, b) => b.balance - a.balance)
         setAmigos(amigosConBalance)
       }
+      
+      if (rawInvitaciones) setInvitaciones(rawInvitaciones)
+      
       setLoading(false)
     }
     fetchData()
   }, [])
+
+  async function handleResendInvite(email: string, id: string) {
+    const lastSent = cooldown[id] || 0
+    if (Date.now() - lastSent < 60000) {
+      alert(lang === 'es' ? 'Esperá un minuto antes de reenviar.' : 'Wait a minute before resending.')
+      return
+    }
+
+    setCooldown(prev => ({ ...prev, [id]: Date.now() }))
+    // Re-trigger email via Supabase Auth or custom API endpoint
+    await supabase.auth.signUp({ email, password: Math.random().toString(36).slice(-10) })
+    alert(lang === 'es' ? 'Invitación reenviada.' : 'Invitation resent.')
+  }
 
   async function handleDelete(amigoId: string, balance: number, friendEmail: string) {
     if (balance !== 0) {
@@ -93,6 +118,10 @@ export default function AmigosPage() {
 
   return (
     <div className="flex flex-col gap-6 max-w-2xl mx-auto p-6">
+      <a href="/dashboard" className="text-sm text-[#4A6A7A] hover:text-[#8A9BAA] flex items-center gap-1">
+        ← {lang === 'es' ? 'Volver al dashboard' : 'Back to dashboard'}
+      </a>
+      
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-bold text-[#E8E0D5]">
           {lang === 'es' ? 'Tus amigos' : 'Your friends'}
@@ -104,6 +133,26 @@ export default function AmigosPage() {
         </p>
       </div>
       
+      {/* Sección Invitaciones Pendientes */}
+      {invitaciones.length > 0 && (
+        <div className="flex flex-col gap-2 mt-4">
+          <h2 className="text-sm font-medium text-[#4A6A7A] uppercase tracking-wider">
+            {lang === 'es' ? 'Invitaciones enviadas' : 'Invitations sent'}
+          </h2>
+          {invitaciones.map((inv) => (
+            <div key={inv.id} className="flex items-center justify-between p-3 bg-[#1E2D3D]/50 border border-[#1E2D3D] rounded-xl">
+              <span className="text-sm text-[#E8E0D5]">{inv.email_invitado}</span>
+              <button 
+                onClick={() => handleResendInvite(inv.email_invitado, inv.id)}
+                className="text-xs text-[#3D8B7A] hover:underline"
+              >
+                {lang === 'es' ? 'Reenviar' : 'Resend'}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {amigos.length === 0 ? (
         <div className="bg-[#172130] border border-[#1E2D3D] rounded-2xl p-8 text-center">
           <p className="text-[#8A9BAA]">
@@ -127,14 +176,17 @@ export default function AmigosPage() {
               <div className="flex items-center gap-6">
                 <div className="text-right">
                   <p className="text-xs text-[#4A6A7A] mb-0.5">
-                    {lang === 'es' ? 'Balance' : 'Balance'}
+                    {amigo.balance > 0 
+                      ? (lang === 'es' ? 'Te debe' : 'Owes you')
+                      : amigo.balance < 0 
+                      ? (lang === 'es' ? 'Le debés' : 'You owe')
+                      : (lang === 'es' ? 'Al día' : 'All good')}
                   </p>
                   <span className={`text-sm font-bold ${
                     amigo.balance > 0 ? 'text-green-500' : 
                     amigo.balance < 0 ? 'text-red-500' : 'text-[#8A9BAA]'
                   }`}>
-                    {amigo.balance !== 0 ? (amigo.balance > 0 ? '+' : '') : ''}
-                    {amigo.balance.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}
+                    {amigo.balance !== 0 ? Math.abs(amigo.balance).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' }) : '-'}
                   </span>
                 </div>
                 
