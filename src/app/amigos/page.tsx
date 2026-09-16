@@ -77,44 +77,81 @@ export default function AmigosPage() {
       }
     }
 
-    await supabase.from('amistades').delete().eq('amigo_id', amigoId).eq('usuario_id', myUserId)
-    setAmigos(prev => prev.filter(a => a.amigo_id !== amigoId))
+    // Intentar borrar por el ID de la amistad (PK)
+    const { error } = await supabase.from('amistades').delete().eq('id', amigoId)
+    
+    if (error) {
+      console.error('Error al eliminar:', error)
+      alert(lang === 'es' ? 'Error al eliminar. Intentá de nuevo.' : 'Error deleting. Try again.')
+      return
+    }
+
+    setAmigos(prev => prev.filter(a => a.id !== amigoId))
   }
 
   if (loading) return <div className="text-gray-400">Loading...</div>
 
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-medium text-[#E8E0D5]">
-        {lang === 'es' ? 'Tus amigos' : 'Your friends'}
-      </h1>
-      
-      <div className="flex flex-col gap-2">
-        {amigos.map((amigo) => (
-          <div key={amigo.id} className="flex items-center justify-between p-4 bg-[#0F1923] border border-[#1E2D3D] rounded-xl">
-            <div>
-              <p className="text-sm font-medium text-[#E8E0D5]">{amigo.perfil.nombre}</p>
-              <p className="text-xs text-[#4A6A7A]">{amigo.perfil.email}</p>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <span className={`text-sm font-bold ${
-                amigo.balance > 0 ? 'text-green-500' : 
-                amigo.balance < 0 ? 'text-red-500' : 'text-gray-500'
-              }`}>
-                {amigo.balance > 0 ? `+` : ''}{amigo.balance.toFixed(2)}
-              </span>
-              
-              <button 
-                onClick={() => handleDelete(amigo.amigo_id, amigo.balance, amigo.perfil.email)}
-                className="text-xs text-[#C0675A] hover:underline"
-              >
-                {lang === 'es' ? 'Eliminar' : 'Remove'}
-              </button>
-            </div>
-          </div>
-        ))}
+    <div className="flex flex-col gap-6 max-w-2xl mx-auto p-6">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-2xl font-bold text-[#E8E0D5]">
+          {lang === 'es' ? 'Tus amigos' : 'Your friends'}
+        </h1>
+        <p className="text-sm text-[#4A6A7A]">
+          {lang === 'es' 
+            ? 'Gestioná tus contactos y verificá quién te debe o a quién le debés.' 
+            : 'Manage your contacts and check who owes you or who you owe.'}
+        </p>
       </div>
+      
+      {amigos.length === 0 ? (
+        <div className="bg-[#172130] border border-[#1E2D3D] rounded-2xl p-8 text-center">
+          <p className="text-[#8A9BAA]">
+            {lang === 'es' ? 'Todavía no tenés amigos agregados.' : 'No friends added yet.'}
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {amigos.map((amigo) => (
+            <div key={amigo.id} className="group relative flex items-center justify-between p-4 bg-[#172130] border border-[#1E2D3D] rounded-xl hover:border-[#3D8B7A]/50 transition-all">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-[#1E2D3D] flex items-center justify-center text-[#3D8B7A] font-bold">
+                  {amigo.perfil.nombre.slice(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-[#E8E0D5]">{amigo.perfil.nombre}</p>
+                  <p className="text-xs text-[#4A6A7A]">{amigo.perfil.email}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-6">
+                <div className="text-right">
+                  <p className="text-xs text-[#4A6A7A] mb-0.5">
+                    {lang === 'es' ? 'Balance' : 'Balance'}
+                  </p>
+                  <span className={`text-sm font-bold ${
+                    amigo.balance > 0 ? 'text-green-500' : 
+                    amigo.balance < 0 ? 'text-red-500' : 'text-[#8A9BAA]'
+                  }`}>
+                    {amigo.balance !== 0 ? (amigo.balance > 0 ? '+' : '') : ''}
+                    {amigo.balance.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}
+                  </span>
+                </div>
+                
+                <button 
+                  onClick={() => handleDelete(amigo.id, amigo.balance, amigo.perfil.email)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-[#C0675A]/10 rounded-lg text-[#C0675A]"
+                  title={lang === 'es' ? 'Eliminar amigo' : 'Remove friend'}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

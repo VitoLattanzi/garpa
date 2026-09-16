@@ -1,27 +1,27 @@
 import { NextResponse } from 'next/server'
+import { Resend } from 'resend'
 
-/**
- * Endpoint para notificar la eliminación de un amigo.
- * 
- * NOTA: Para implementar el envío real de emails, podrías usar servicios como Resend, Nodemailer (con SMTP), o SendGrid.
- * 1. Debes crear una cuenta en el servicio elegido (ej. Resend.com).
- * 2. Obtener una API KEY.
- * 3. Guardar esa KEY en tus variables de entorno (.env.local) como EMAIL_SERVICE_API_KEY.
- * 4. Usar esa variable aquí para autenticar el envío.
- */
+const resend = new Resend(process.env.RESEND_API_KEY)
+
 export async function POST(request: Request) {
   try {
     const { userName, friendEmail, saldoPendiente } = await request.json()
 
-    // Mock de log para verificar que los datos llegan
-    console.log(`[NOTIFICACIÓN] Usuario ${userName} eliminó a ${friendEmail}. Saldo pendiente: $${saldoPendiente}`)
+    const { data, error } = await resend.emails.send({
+      from: 'onboarding@resend.dev',
+      to: friendEmail,
+      subject: 'Garpa - Notificación de eliminación',
+      html: `<p>${userName} te ha eliminado de sus amigos. Quedó un saldo pendiente de $${saldoPendiente}</p>`
+    })
 
-    // TODO: Implementar lógica de envío de email aquí
-    // await resend.emails.send({ ... })
+    if (error) {
+      console.error('Error enviando email con Resend:', error)
+      return NextResponse.json({ success: false, error: 'Error al enviar el email' }, { status: 500 })
+    }
 
-    return NextResponse.json({ success: true, message: 'Notificación enviada (mock)' })
+    return NextResponse.json({ success: true, message: 'Notificación enviada' })
   } catch (error) {
-    console.error('Error al notificar:', error)
+    console.error('Error en ruta notify-delete:', error)
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 })
   }
 }

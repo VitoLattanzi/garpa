@@ -27,6 +27,7 @@ export default function ModalNuevoGasto({ onClose, onCreated, grupos, amigos, us
   const [descripcion, setDescripcion] = useState('')
   const [monto, setMonto] = useState('')
   const [grupoId, setGrupoId] = useState<string>('')
+  const [expenseType, setExpenseType] = useState<'group' | 'friend'>('group')
   const [splitMode, setSplitMode] = useState<SplitMode>('igual')
   const [participantes, setParticipantes] = useState<SplitRow[]>([])
   const [miembrosGrupo, setMiembrosGrupo] = useState<{ usuario_id: string; nombre: string }[]>([])
@@ -39,11 +40,11 @@ export default function ModalNuevoGasto({ onClose, onCreated, grupos, amigos, us
    */
   useEffect(() => {
     async function cargarMiembros() {
-      if (!grupoId) {
-        // Sin grupo — usamos amigos + el usuario mismo
+      if (expenseType === 'friend' || !grupoId) {
+        // Sin grupo o modo amigos — usamos amigos + el usuario mismo
         const base = [
           { usuario_id: userId, nombre: lang === 'es' ? 'Vos' : 'You' },
-          ...amigos.map(a => ({ usuario_id: a.amigo_id, nombre: a.perfil.nombre }))
+          ...amigos.map(a => ({ usuario_id: a.amigo_id, nombre: a.perfil.nombre || a.perfil.email }))
         ]
         setMiembrosGrupo(base)
         recalcSplit(base, monto, splitMode)
@@ -65,13 +66,13 @@ export default function ModalNuevoGasto({ onClose, onCreated, grupos, amigos, us
       // Real — traemos los miembros del grupo desde Supabase
       const { data } = await supabase
         .from('miembros_grupo')
-        .select('usuario_id, usuarios(nombre)')
+        .select('usuario_id, usuarios(nombre, email)')
         .eq('grupo_id', grupoId)
 
       if (data) {
         const miembros = data.map((m: any) => ({
           usuario_id: m.usuario_id,
-          nombre: m.usuarios?.nombre ?? 'Usuario',
+          nombre: m.usuarios?.nombre || m.usuarios?.email || 'Usuario',
         }))
         setMiembrosGrupo(miembros)
         recalcSplit(miembros, monto, splitMode)
@@ -79,7 +80,7 @@ export default function ModalNuevoGasto({ onClose, onCreated, grupos, amigos, us
     }
 
     cargarMiembros()
-  }, [grupoId])
+  }, [grupoId, expenseType, amigos, userId, isDemo, supabase, monto, splitMode, lang])
 
   /**
    * Recalcula el breakdown de división cada vez que cambia
@@ -310,22 +311,44 @@ export default function ModalNuevoGasto({ onClose, onCreated, grupos, amigos, us
           />
         </div>
 
-        {/* Grupo */}
+        {/* Tipo de gasto */}
         <div className="mb-4">
-          <label className="block text-xs text-[#4A6A7A] mb-1.5">
-            {lang === 'es' ? 'Grupo (opcional)' : 'Group (optional)'}
+          <label className="block text-xs text-[#4A6A7A] mb-2">
+            {lang === 'es' ? 'Tipo de gasto' : 'Expense type'}
           </label>
-          <select
-            value={grupoId}
-            onChange={e => setGrupoId(e.target.value)}
-            className="w-full bg-[#0F1923] border border-[#1E2D3D] rounded-lg px-3 py-2.5 text-sm text-[#E8E0D5] outline-none focus:border-[#3D8B7A] transition"
-          >
-            <option value="">{lang === 'es' ? 'Sin grupo — entre amigos' : 'No group — between friends'}</option>
-            {grupos.map(g => (
-              <option key={g.id} value={g.id}>{g.nombre}</option>
-            ))}
-          </select>
+          <div className="flex gap-2">
+            <button
+              onClick={() => { setExpenseType('group'); setGrupoId('') }}
+              className={`flex-1 py-2 rounded-lg text-xs border ${expenseType === 'group' ? 'border-[#3D8B7A] text-[#3D8B7A] bg-[#3D8B7A]/10' : 'border-[#1E2D3D] text-[#8A9BAA]'}`}
+            >
+              {lang === 'es' ? 'Grupo' : 'Group'}
+            </button>
+            <button
+              onClick={() => { setExpenseType('friend'); setGrupoId('') }}
+              className={`flex-1 py-2 rounded-lg text-xs border ${expenseType === 'friend' ? 'border-[#3D8B7A] text-[#3D8B7A] bg-[#3D8B7A]/10' : 'border-[#1E2D3D] text-[#8A9BAA]'}`}
+            >
+              {lang === 'es' ? 'Amigos' : 'Friends'}
+            </button>
+          </div>
         </div>
+
+        {expenseType === 'group' && (
+          <div className="mb-4">
+            <label className="block text-xs text-[#4A6A7A] mb-1.5">
+              {lang === 'es' ? 'Seleccionar grupo' : 'Select group'}
+            </label>
+            <select
+              value={grupoId}
+              onChange={e => setGrupoId(e.target.value)}
+              className="w-full bg-[#0F1923] border border-[#1E2D3D] rounded-lg px-3 py-2.5 text-sm text-[#E8E0D5] outline-none focus:border-[#3D8B7A] transition"
+            >
+              <option value="">{lang === 'es' ? 'Elegí un grupo' : 'Choose a group'}</option>
+              {grupos.map(g => (
+                <option key={g.id} value={g.id}>{g.nombre}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Participantes */}
         <div className="mb-4">
