@@ -4,15 +4,17 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { useLang } from '@/context/LangContext'
 
 /**
  * Página de registro
  * Crea un nuevo usuario en Supabase Auth y su perfil en la tabla usuarios
- * Redirige al login para que confirme el email
+ * Conectado con LangContext para soporte multiidioma
  */
 export default function RegisterPage() {
   const router = useRouter()
   const supabase = createSupabaseBrowserClient()
+  const { t } = useLang()
 
   const [nombre, setNombre] = useState('')
   const [email, setEmail] = useState('')
@@ -29,33 +31,13 @@ export default function RegisterPage() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) router.push('/dashboard')
     })
-  }, [])
+  }, [router, supabase.auth])
 
   /**
    * Maneja el registro del usuario
-   * 1. Crea el usuario en Supabase Auth
-   * 2. Inserta el perfil en la tabla usuarios
+   * Crea el usuario en Supabase Auth y activa el perfil via trigger
    */
   async function handleRegister(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
-
-    const { data, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { nombre },
-      },
-    })
-
-    if (authError) {
-      setError(authError.message)
-      setLoading(false)
-      return
-    }
-
-    async function handleRegister(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError(null)
@@ -74,11 +56,6 @@ export default function RegisterPage() {
       return
     }
 
-    // El perfil se crea automáticamente via trigger en Supabase
-    setSuccess(true)
-    setLoading(false)
-  }
-
     setSuccess(true)
     setLoading(false)
   }
@@ -88,16 +65,15 @@ export default function RegisterPage() {
     return (
       <div className="flex flex-col items-center text-center gap-4">
         <div className="text-4xl">📬</div>
-        <h2 className="text-xl font-semibold text-gray-900">Revisá tu email</h2>
+        <h2 className="text-xl font-semibold text-gray-900">{t('register_success_title')}</h2>
         <p className="text-gray-500 text-sm">
-          Te mandamos un link de confirmación a <strong>{email}</strong>.
-          Confirmá tu cuenta para poder ingresar.
+          {t('register_success_desc')} <strong>{email}</strong>. {t('register_success_desc2')}
         </p>
         <button
           onClick={() => router.push('/login')}
-          className="mt-2 bg-gray-900 text-white rounded-lg py-2.5 px-6 text-sm font-medium hover:bg-gray-700 transition"
+          className="mt-2 bg-gray-900 text-white rounded-lg py-2.5 px-6 text-sm font-medium hover:bg-gray-700 transition cursor-pointer"
         >
-          Ir al login
+          {t('register_success_btn')}
         </button>
       </div>
     )
@@ -107,14 +83,14 @@ export default function RegisterPage() {
     <div className="flex flex-col gap-6">
 
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900 mb-1">Crear cuenta</h1>
-        <p className="text-gray-500 text-sm">Empezá a dividir gastos sin drama</p>
+        <h1 className="text-2xl font-semibold text-gray-900 mb-1">{t('register_title')}</h1>
+        <p className="text-gray-500 text-sm">{t('register_subtitle')}</p>
       </div>
 
       <form onSubmit={handleRegister} className="flex flex-col gap-4">
 
         <div className="flex flex-col gap-1">
-          <label className="text-sm text-gray-600">Nombre</label>
+          <label className="text-sm text-gray-600">{t('register_name')}</label>
           <input
             type="text"
             value={nombre}
@@ -126,7 +102,7 @@ export default function RegisterPage() {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-sm text-gray-600">Email</label>
+          <label className="text-sm text-gray-600">{t('login_email')}</label>
           <input
             type="email"
             value={email}
@@ -138,12 +114,12 @@ export default function RegisterPage() {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-sm text-gray-600">Contraseña</label>
+          <label className="text-sm text-gray-600">{t('login_password')}</label>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Mínimo 6 caracteres"
+            placeholder="••••••••"
             required
             minLength={6}
             className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-gray-400 transition"
@@ -157,17 +133,17 @@ export default function RegisterPage() {
         <button
           type="submit"
           disabled={loading}
-          className="bg-gray-900 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-gray-700 transition disabled:opacity-50"
+          className="bg-gray-900 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-gray-700 transition disabled:opacity-50 cursor-pointer"
         >
-          {loading ? 'Creando cuenta...' : 'Crear cuenta'}
+          {loading ? t('register_loading') : t('register_btn')}
         </button>
 
       </form>
 
       <p className="text-center text-sm text-gray-500">
-        ¿Ya tenés cuenta?{' '}
+        {t('register_has_account')}{' '}
         <Link href="/login" className="text-gray-900 font-medium hover:underline">
-          Ingresá
+          {t('register_login')}
         </Link>
       </p>
 

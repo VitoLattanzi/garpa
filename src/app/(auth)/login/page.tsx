@@ -4,15 +4,17 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { useLang } from '@/context/LangContext'
 
 /**
  * Página de login
  * Maneja la autenticación del usuario con email y contraseña
- * Redirige al dashboard si el login es exitoso
+ * Conectado con LangContext para soporte multiidioma
  */
 export default function LoginPage() {
   const router = useRouter()
   const supabase = createSupabaseBrowserClient()
+  const { t } = useLang()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -27,7 +29,7 @@ export default function LoginPage() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) router.push('/dashboard')
     })
-  }, [])
+  }, [router, supabase.auth])
 
   /**
    * Maneja el submit del formulario
@@ -38,13 +40,13 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
 
-    if (error) {
-      setError('Email o contraseña incorrectos')
+    if (authError) {
+      setError('login_error')
       setLoading(false)
       return
     }
@@ -58,14 +60,14 @@ export default function LoginPage() {
     <div className="flex flex-col gap-6">
 
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900 mb-1">Bienvenido a Garpa</h1>
-        <p className="text-gray-500 text-sm">Ingresá para ver tus gastos compartidos</p>
+        <h1 className="text-2xl font-semibold text-gray-900 mb-1">{t('login_title')}</h1>
+        <p className="text-gray-500 text-sm">{t('login_subtitle')}</p>
       </div>
 
       <form onSubmit={handleLogin} className="flex flex-col gap-4">
 
         <div className="flex flex-col gap-1">
-          <label className="text-sm text-gray-600">Email</label>
+          <label className="text-sm text-gray-600">{t('login_email')}</label>
           <input
             type="email"
             value={email}
@@ -77,7 +79,7 @@ export default function LoginPage() {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-sm text-gray-600">Contraseña</label>
+          <label className="text-sm text-gray-600">{t('login_password')}</label>
           <input
             type="password"
             value={password}
@@ -89,7 +91,7 @@ export default function LoginPage() {
         </div>
 
         {error && (
-          <p className="text-red-500 text-sm">{error}</p>
+          <p className="text-red-500 text-sm">{error === 'login_error' ? t('login_error') : error}</p>
         )}
 
         <button
@@ -97,15 +99,15 @@ export default function LoginPage() {
           disabled={loading}
           className="bg-gray-900 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-gray-700 transition disabled:opacity-50"
         >
-          {loading ? 'Ingresando...' : 'Ingresar'}
+          {loading ? t('login_loading') : t('login_btn')}
         </button>
 
       </form>
 
       <p className="text-center text-sm text-gray-500">
-        ¿No tenés cuenta?{' '}
+        {t('login_no_account')}{' '}
         <Link href="/register" className="text-gray-900 font-medium hover:underline">
-          Registrate
+          {t('login_register')}
         </Link>
       </p>
 

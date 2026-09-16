@@ -1,4 +1,3 @@
-@'
 # AGENTS.md
 
 ## Stack
@@ -23,7 +22,7 @@ Tables: usuarios, amistades, grupos, miembros_grupo, gastos, participantes_gasto
 
 ## Conventions
 - camelCase for variables/functions, PascalCase for components, kebab-case for page files
-- 'use client' explicit on interactive components; typed props via type Props
+- 'use client' explicit ONLY on interactive components that require state, hooks, or client APIs
 - Local state only (useState) -- no Zustand/Redux; only global state is LangContext (ES/EN)
 - Two separate Supabase clients: supabase-browser.ts (Client Components) and supabase-server.ts (Server Components)
 
@@ -31,8 +30,6 @@ Tables: usuarios, amistades, grupos, miembros_grupo, gastos, participantes_gasto
 - Slate color palette is hardcoded as hex values instead of extended in tailwind.config
 - Some Supabase fetches use as any (types not generated via Supabase CLI yet)
 - auth-errors.ts exists but is not wired into login/register yet
-- Auth pages (login/register/layout) do not use LangContext yet -- text is hardcoded in Spanish
 - No error handling in dashboard fetches if Supabase fails
 
 ## Do not use Firebase anywhere -- this project is 100% Supabase.
-'@ | Out-File -FilePath G:\Garpa\garpa\AGENTS.md -Encoding utf8
