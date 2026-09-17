@@ -31,8 +31,29 @@ export default function ModalNuevoGasto({ onClose, onCreated, grupos, amigos, us
   const [splitMode, setSplitMode] = useState<SplitMode>('igual')
   const [participantes, setParticipantes] = useState<SplitRow[]>([])
   const [miembrosGrupo, setMiembrosGrupo] = useState<{ usuario_id: string; nombre: string }[]>([])
+  const [selectedParticipants, setSelectedParticipants] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  /**
+   * Cuando cambian los miembros, seleccionamos a todos por defecto
+   */
+  useEffect(() => {
+    setSelectedParticipants(new Set(miembrosGrupo.map(m => m.usuario_id)))
+  }, [miembrosGrupo])
+
+  function toggleParticipant(userId: string) {
+    const next = new Set(selectedParticipants)
+    if (next.has(userId)) {
+      next.delete(userId)
+    } else {
+      next.add(userId)
+    }
+    setSelectedParticipants(next)
+    // Recalcular split con los participantes seleccionados
+    const selected = miembrosGrupo.filter(m => next.has(m.usuario_id))
+    recalcSplit(selected, monto, splitMode)
+  }
 
   /**
    * Cuando cambia el grupo seleccionado, cargamos sus miembros
@@ -47,7 +68,7 @@ export default function ModalNuevoGasto({ onClose, onCreated, grupos, amigos, us
           ...amigos.map(a => ({ usuario_id: a.amigo_id, nombre: a.perfil.nombre || a.perfil.email }))
         ]
         setMiembrosGrupo(base)
-        recalcSplit(base, monto, splitMode)
+        // No llamamos recalcSplit aquí directamente porque el useEffect anterior se encargará
         return
       }
 
@@ -59,7 +80,6 @@ export default function ModalNuevoGasto({ onClose, onCreated, grupos, amigos, us
           { usuario_id: 'maria', nombre: 'María' },
         ]
         setMiembrosGrupo(demoMiembros)
-        recalcSplit(demoMiembros, monto, splitMode)
         return
       }
 
@@ -75,12 +95,11 @@ export default function ModalNuevoGasto({ onClose, onCreated, grupos, amigos, us
           nombre: m.usuarios?.nombre || m.usuarios?.email || 'Usuario',
         }))
         setMiembrosGrupo(miembros)
-        recalcSplit(miembros, monto, splitMode)
       }
     }
 
     cargarMiembros()
-  }, [grupoId, expenseType, amigos, userId, isDemo, supabase, monto, splitMode, lang])
+  }, [grupoId, expenseType, amigos, userId, isDemo, supabase])
 
   /**
    * Recalcula el breakdown de división cada vez que cambia
@@ -153,13 +172,15 @@ export default function ModalNuevoGasto({ onClose, onCreated, grupos, amigos, us
   // Cambia el modo de split y recalcula
   function handleSplitMode(mode: SplitMode) {
     setSplitMode(mode)
-    recalcSplit(miembrosGrupo, monto, mode, participantes)
+    const selected = miembrosGrupo.filter(m => selectedParticipants.has(m.usuario_id))
+    recalcSplit(selected, monto, mode, participantes)
   }
 
   // Recalcula cuando cambia el monto
   function handleMontoChange(val: string) {
     setMonto(val)
-    recalcSplit(miembrosGrupo, val, splitMode, participantes)
+    const selected = miembrosGrupo.filter(m => selectedParticipants.has(m.usuario_id))
+    recalcSplit(selected, val, splitMode, participantes)
   }
 
   async function handleSubmit() {
@@ -356,14 +377,23 @@ export default function ModalNuevoGasto({ onClose, onCreated, grupos, amigos, us
             {lang === 'es' ? '¿A quiénes aplica?' : 'Who does it apply to?'}
           </label>
           <div className="flex flex-wrap gap-2">
-            {miembrosGrupo.map(m => (
-              <span
-                key={m.usuario_id}
-                className="px-3 py-1.5 rounded-full text-xs border border-[#3D8B7A] text-[#3D8B7A] bg-[#3D8B7A]/10"
-              >
-                {m.nombre}
-              </span>
-            ))}
+            {miembrosGrupo.map(m => {
+              const isSelected = selectedParticipants.has(m.usuario_id)
+              return (
+                <button
+                  key={m.usuario_id}
+                  type="button"
+                  onClick={() => toggleParticipant(m.usuario_id)}
+                  className={`px-3 py-1.5 rounded-full text-xs border transition ${
+                    isSelected
+                      ? 'border-[#3D8B7A] text-[#3D8B7A] bg-[#3D8B7A]/10'
+                      : 'border-[#1E2D3D] text-[#8A9BAA]'
+                  }`}
+                >
+                  {m.nombre}
+                </button>
+              )
+            })}
           </div>
         </div>
 
