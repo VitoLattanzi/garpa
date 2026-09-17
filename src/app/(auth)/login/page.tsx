@@ -61,7 +61,7 @@ export default function LoginPage() {
     <div className="flex flex-col gap-6">
 
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900 mb-1">{t('login_title')}</h1>
+        <h1 className="text-2xl font-semibold text-[#0F1923] mb-1">{t('login_title')}</h1>
         <p className="text-gray-500 text-sm">{t('login_subtitle')}</p>
       </div>
 
@@ -79,9 +79,6 @@ export default function LoginPage() {
           />
         </div>
 
-  const [showPassword, setShowPassword] = useState(false)
-  
-  // ... inside return ...
         <div className="flex flex-col gap-1">
           <label className="text-sm text-gray-800 font-medium">{t('login_password')}</label>
           <div className="relative">
@@ -110,7 +107,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading}
-          className="bg-gray-900 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-gray-700 transition disabled:opacity-50"
+          className="bg-[#3D8B7A] text-[#0F1923] rounded-lg py-2.5 text-sm font-semibold hover:opacity-90 transition disabled:opacity-50"
         >
           {loading ? t('login_loading') : t('login_btn')}
         </button>
@@ -119,7 +116,7 @@ export default function LoginPage() {
 
       <p className="text-center text-sm text-gray-500">
         {t('login_no_account')}{' '}
-        <Link href="/register" className="text-gray-900 font-medium hover:underline">
+        <Link href="/register" className="text-[#3D8B7A] font-medium hover:underline">
           {t('login_register')}
         </Link>
       </p>

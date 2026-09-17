@@ -2,20 +2,21 @@
 
 import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useLang } from '@/context/LangContext'
 
-export default function GroupConfigPage({ params }: { params: Promise<{ id: string }> }) {
+export default function GroupDashboardPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params)
   const groupId = resolvedParams.id
   const supabase = createSupabaseBrowserClient()
   const { lang } = useLang()
 
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState<'resumen' | 'config'>('resumen')
   const [grupo, setGrupo] = useState<{ id: string; nombre: string } | null>(null)
+  const [gastos, setGastos] = useState<any[]>([])
   const [miembros, setMiembros] = useState<any[]>([])
-  const [amigos, setAmigos] = useState<any[]>([])
-  const [invitaciones, setInvitaciones] = useState<any[]>([])
   const [nombre, setNombre] = useState('')
 
   useEffect(() => {
@@ -27,105 +28,90 @@ export default function GroupConfigPage({ params }: { params: Promise<{ id: stri
         setNombre(g.nombre)
       }
 
-      // 2. Miembros
+      // 2. Gastos del grupo
+      const { data: gts } = await supabase
+        .from('gastos')
+        .select('*, pagador:usuarios(nombre)')
+        .eq('grupo_id', groupId)
+        .order('fecha', { ascending: false })
+      if (gts) setGastos(gts)
+
+      // 3. Miembros
       const { data: m } = await supabase
         .from('miembros_grupo')
         .select('usuario_id, usuarios(nombre, email)')
         .eq('grupo_id', groupId)
       if (m) setMiembros(m)
 
-      // 3. Amigos (para invitar)
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
-        const { data: a } = await supabase
-          .from('amistades')
-          .select('amigo_id, perfil:usuarios!amistades_amigo_id_fkey(nombre, email)')
-          .eq('usuario_id', session.user.id)
-          .eq('estado', 'activo')
-        if (a) setAmigos(a)
-        
-        // 4. Invitaciones pendientes (asumimos campo grupo_id en invitaciones)
-        const { data: invs } = await supabase
-          .from('invitaciones')
-          .select('*')
-          .eq('grupo_id', groupId)
-          .eq('estado', 'pendiente')
-        if (invs) setInvitaciones(invs)
-      }
-
       setLoading(false)
     }
     loadData()
   }, [groupId, supabase])
 
-  async function updateName() {
-    await supabase.from('grupos').update({ nombre }).eq('id', groupId)
-    alert(lang === 'es' ? 'Nombre actualizado' : 'Name updated')
-  }
-
-  async function removeMember(userId: string) {
-    await supabase.from('miembros_grupo').delete().eq('grupo_id', groupId).eq('usuario_id', userId)
-    setMiembros(miembros.filter(m => m.usuario_id !== userId))
-  }
-
-  async function addMember(userId: string) {
-    await supabase.from('miembros_grupo').insert({ grupo_id: groupId, usuario_id: userId })
-    // Refresh members
-    const { data: m } = await supabase
-        .from('miembros_grupo')
-        .select('usuario_id, usuarios(nombre, email)')
-        .eq('grupo_id', groupId)
-    if (m) setMiembros(m)
-  }
-
-  async function resendInvite(email: string) {
-    alert(lang === 'es' ? `Reenviando invitación a ${email}...` : `Resending invite to ${email}...`)
-  }
-
   if (loading) return <div className="p-6 text-[#4A6A7A]">Cargando...</div>
 
   return (
-    <div className="p-6 max-w-2xl mx-auto text-[#E8E0D5]">
-      <h1 className="text-2xl font-semibold mb-8 text-[#3D8B7A]">{lang === 'es' ? 'Configuración del grupo' : 'Group settings'}</h1>
-      
-      <div className="bg-[#172130] border border-[#1E2D3D] rounded-xl p-6 mb-8">
-        <label className="block text-xs text-[#4A6A7A] mb-2">{lang === 'es' ? 'Nombre del grupo' : 'Group name'}</label>
-        <div className="flex gap-2">
-          <input 
-            value={nombre} 
-            onChange={e => setNombre(e.target.value)}
-            className="flex-1 bg-[#0F1923] border border-[#1E2D3D] rounded-lg px-4 py-2 text-sm outline-none focus:border-[#3D8B7A] text-[#E8E0D5]"
-          />
-          <button onClick={updateName} className="bg-[#3D8B7A] text-[#0F1923] px-6 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition">{lang === 'es' ? 'Guardar' : 'Save'}</button>
-        </div>
+    <div className="p-6 max-w-3xl mx-auto text-[#E8E0D5]">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <Link href="/dashboard" className="text-sm text-[#4A6A7A] hover:text-[#3D8B7A] transition flex items-center gap-1">
+          ← {lang === 'es' ? 'Volver' : 'Back'}
+        </Link>
+        <h1 className="text-xl font-medium">{grupo?.nombre}</h1>
+        <div className="w-16" /> {/* Spacer */}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div>
-          <h2 className="text-sm font-medium mb-4 text-[#8A9BAA]">{lang === 'es' ? 'Miembros actuales' : 'Members'}</h2>
-          <div className="bg-[#172130] border border-[#1E2D3D] rounded-xl overflow-hidden">
-            {miembros.map(m => (
-              <div key={m.usuario_id} className="flex justify-between items-center px-4 py-3 border-b border-[#1E2D3D] last:border-0">
-                <span className="text-sm">{m.usuarios?.nombre || m.usuarios?.email}</span>
-                <button onClick={() => removeMember(m.usuario_id)} className="text-xs text-[#C0675A] hover:underline">{lang === 'es' ? 'Eliminar' : 'Remove'}</button>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <h2 className="text-sm font-medium mb-4 text-[#8A9BAA]">{lang === 'es' ? 'Invitaciones pendientes' : 'Pending invites'}</h2>
-          <div className="bg-[#172130] border border-[#1E2D3D] rounded-xl overflow-hidden">
-            {invitaciones.length === 0 && <p className="p-4 text-xs text-[#4A6A7A]">{lang === 'es' ? 'No hay invitaciones' : 'No pending invites'}</p>}
-            {invitaciones.map(inv => (
-              <div key={inv.id} className="flex justify-between items-center px-4 py-3 border-b border-[#1E2D3D] last:border-0">
-                <span className="text-sm truncate max-w-[150px]">{inv.email_invitado}</span>
-                <button onClick={() => resendInvite(inv.email_invitado)} className="text-xs text-[#3D8B7A] hover:underline">{lang === 'es' ? 'Reenviar' : 'Resend'}</button>
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* Tabs */}
+      <div className="flex gap-4 border-b border-[#1E2D3D] mb-6">
+        <button onClick={() => setActiveTab('resumen')} className={`pb-2 text-sm ${activeTab === 'resumen' ? 'text-[#3D8B7A] border-b-2 border-[#3D8B7A]' : 'text-[#4A6A7A]'}`}>
+          {lang === 'es' ? 'Resumen' : 'Overview'}
+        </button>
+        <button onClick={() => setActiveTab('config')} className={`pb-2 text-sm ${activeTab === 'config' ? 'text-[#3D8B7A] border-b-2 border-[#3D8B7A]' : 'text-[#4A6A7A]'}`}>
+          {lang === 'es' ? 'Configuración' : 'Settings'}
+        </button>
       </div>
+
+      {activeTab === 'resumen' ? (
+        <div className="space-y-6">
+          <div className="bg-[#172130] border border-[#1E2D3D] rounded-xl p-6">
+             <h2 className="text-xs text-[#4A6A7A] uppercase mb-2">{lang === 'es' ? 'Saldo del grupo' : 'Group balance'}</h2>
+             <p className="text-3xl font-medium text-[#E8E0D5]">
+               ${gastos.reduce((a, b) => a + b.monto, 0).toLocaleString('es-AR')}
+             </p>
+             <p className="text-xs text-[#4A6A7A] mt-1">{gastos.length} {lang === 'es' ? 'gastos totales' : 'total expenses'}</p>
+          </div>
+
+          <div>
+            <h2 className="text-sm font-medium mb-4">{lang === 'es' ? 'Gastos recientes' : 'Recent expenses'}</h2>
+            <div className="bg-[#172130] border border-[#1E2D3D] rounded-xl overflow-hidden">
+              {gastos.map(g => (
+                <div key={g.id} className="flex justify-between items-center px-4 py-3 border-b border-[#1E2D3D] last:border-0">
+                  <div>
+                    <p className="text-sm">{g.descripcion}</p>
+                    <p className="text-[10px] text-[#4A6A7A]">{g.pagador?.nombre}</p>
+                  </div>
+                  <span className="text-sm font-medium text-[#3D8B7A]">${g.monto.toLocaleString('es-AR')}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <div className="bg-[#172130] border border-[#1E2D3D] rounded-xl p-6">
+            <label className="block text-xs text-[#4A6A7A] mb-2">{lang === 'es' ? 'Nombre del grupo' : 'Group name'}</label>
+            <input value={nombre} onChange={e => setNombre(e.target.value)} className="w-full bg-[#0F1923] border border-[#1E2D3D] rounded-lg px-4 py-2 text-sm" />
+          </div>
+          <div>
+            <h2 className="text-sm mb-4 text-[#8A9BAA]">{lang === 'es' ? 'Miembros' : 'Members'}</h2>
+            <div className="bg-[#172130] border border-[#1E2D3D] rounded-xl">
+              {miembros.map(m => (
+                <div key={m.usuario_id} className="px-4 py-3 border-b border-[#1E2D3D] text-sm">{m.usuarios?.nombre}</div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

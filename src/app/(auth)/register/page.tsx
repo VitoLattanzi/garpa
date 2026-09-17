@@ -83,7 +83,7 @@ export default function RegisterPage() {
     <div className="flex flex-col gap-6">
 
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900 mb-1">{t('register_title')}</h1>
+        <h1 className="text-2xl font-semibold text-[#0F1923] mb-1">{t('register_title')}</h1>
         <p className="text-gray-500 text-sm">{t('register_subtitle')}</p>
       </div>
 
@@ -133,7 +133,7 @@ export default function RegisterPage() {
         <button
           type="submit"
           disabled={loading}
-          className="bg-gray-900 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-gray-700 transition disabled:opacity-50 cursor-pointer"
+          className="bg-[#3D8B7A] text-[#0F1923] rounded-lg py-2.5 text-sm font-semibold hover:opacity-90 transition disabled:opacity-50 cursor-pointer"
         >
           {loading ? t('register_loading') : t('register_btn')}
         </button>
@@ -142,7 +142,7 @@ export default function RegisterPage() {
 
       <p className="text-center text-sm text-gray-500">
         {t('register_has_account')}{' '}
-        <Link href="/login" className="text-gray-900 font-medium hover:underline">
+        <Link href="/login" className="text-[#3D8B7A] font-medium hover:underline">
           {t('register_login')}
         </Link>
       </p>
