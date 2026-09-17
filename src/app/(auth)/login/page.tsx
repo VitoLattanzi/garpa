@@ -14,7 +14,7 @@ import { useLang } from '@/context/LangContext'
 export default function LoginPage() {
   const router = useRouter()
   const supabase = createSupabaseBrowserClient()
-  const { t } = useLang()
+  const { t, lang } = useLang()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
