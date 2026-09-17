@@ -21,6 +21,30 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [resetLoading, setResetLoading] = useState(false)
+
+  /**
+   * Maneja el reseteo de contraseña
+   */
+  async function handleForgotPassword() {
+    if (!email) {
+      setError(lang === 'es' ? 'Ingresá tu email primero' : 'Enter your email first')
+      return
+    }
+    setResetLoading(true)
+    setError(null)
+    
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/update-password`,
+    })
+
+    if (resetError) {
+      setError(resetError.message)
+    } else {
+      alert(lang === 'es' ? 'Email de recuperación enviado' : 'Recovery email sent')
+    }
+    setResetLoading(false)
+  }
 
   /**
    * Verificación al montar el componente
@@ -88,7 +112,7 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-black outline-none focus:border-gray-600 transition"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-black placeholder-gray-500 outline-none focus:border-gray-600 transition"
             />
             <button
               type="button"
@@ -98,6 +122,17 @@ export default function LoginPage() {
               {showPassword ? '👁️' : '🔒'}
             </button>
           </div>
+          <button
+            type="button"
+            onClick={handleForgotPassword}
+            disabled={resetLoading}
+            className="text-xs text-right text-gray-500 hover:text-[#3D8B7A] transition"
+          >
+            {resetLoading 
+              ? (lang === 'es' ? 'Enviando...' : 'Sending...') 
+              : (lang === 'es' ? '¿Olvidaste tu contraseña?' : 'Forgot password?')}
+          </button>
+        </div>
         </div>
 
         {error && (

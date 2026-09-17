@@ -45,7 +45,6 @@ export default function DashboardPage() {
   const [deudas, setDeudas] = useState<Deuda[]>([])
   const [gastos, setGastos] = useState<Gasto[]>([])
   const [amigos, setAmigos] = useState<Amigo[]>([])
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [gruposExpanded, setGruposExpanded] = useState(true)
   const [activeModal, setActiveModal] = useState<'debo' | 'meDeban' | 'nuevoGrupo' | 'nuevoGasto' | 'agregarAmigo' | null>(null)
   const [loading, setLoading] = useState(true)
@@ -314,8 +313,6 @@ export default function DashboardPage() {
         isDemo={isDemo} 
         user={user} 
         grupos={grupos} 
-        onToggle={() => setSidebarOpen(!sidebarOpen)} 
-        isOpen={sidebarOpen} 
       />
 
       <main className={`flex-1 overflow-y-auto p-6 ${isDemo ? 'mt-8' : ''}`}>
