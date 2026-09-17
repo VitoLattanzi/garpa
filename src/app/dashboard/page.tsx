@@ -9,6 +9,7 @@ import { Grupo, Deuda, Gasto, Amigo } from '@/types/garpa'
 import ModalNuevoGrupo from '@/components/ModalNuevoGrupo'
 import ModalNuevoGasto from '@/components/ModalNuevoGasto'
 import ModalAgregarAmigo from '@/components/ModalAgregarAmigo'
+import Sidebar from '@/components/Sidebar'
 
 const DEMO_USER_ID = 'demo-user'
 const DEMO_GRUPOS: Grupo[] = [
@@ -44,7 +45,7 @@ export default function DashboardPage() {
   const [deudas, setDeudas] = useState<Deuda[]>([])
   const [gastos, setGastos] = useState<Gasto[]>([])
   const [amigos, setAmigos] = useState<Amigo[]>([])
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [gruposExpanded, setGruposExpanded] = useState(true)
   const [activeModal, setActiveModal] = useState<'debo' | 'meDeban' | 'nuevoGrupo' | 'nuevoGasto' | 'agregarAmigo' | null>(null)
   const [loading, setLoading] = useState(true)
@@ -309,71 +310,13 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <aside className={`${sidebarOpen ? 'w-56' : 'w-14'} ${isDemo ? 'mt-8' : ''} flex flex-col flex-shrink-0 transition-all duration-250 overflow-hidden bg-[#172130] border-r border-[#1E2D3D]`}>
-        <div className="flex items-center justify-between px-3 py-3 border-b border-[#1E2D3D]">
-          {sidebarOpen && <span className="text-base font-medium text-[#E8E0D5]">garpa</span>}
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="flex items-center justify-center w-7 h-7 rounded-lg text-[#4A6A7A] hover:text-[#8A9BAA] transition ml-auto">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              {sidebarOpen ? <path d="M11 19l-7-7 7-7M19 19l-7-7 7-7" /> : <path d="M13 5l7 7-7 7M5 5l7 7-7 7" />}
-            </svg>
-          </button>
-        </div>
-
-        <nav className="flex flex-col gap-0.5 px-2 py-3">
-          {sidebarOpen && <span className="text-xs text-[#4A6A7A] px-2 pb-1">{t('dash_menu')}</span>}
-          {[
-            { icon: '🏠', label: t('dash_home'), href: '/dashboard', active: true },
-            { icon: '👥', label: t('dash_friends'), href: '/amigos', active: false },
-            { icon: '💳', label: t('dash_expenses'), href: '/gastos', active: false },
-            { icon: '⚙️', label: t('dash_settings'), href: '/configuracion', active: false },
-          ].map(item => (
-            <Link key={item.href} href={item.href} className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition w-full ${item.active ? 'bg-[#1E2D3D] text-[#E8E0D5] font-medium' : 'text-[#8A9BAA] hover:bg-[#1E2D3D]'}`}>
-              <span className="text-base flex-shrink-0">{item.icon}</span>
-              {sidebarOpen && <span className="truncate">{item.label}</span>}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="flex flex-col px-2 flex-1 overflow-hidden">
-          {sidebarOpen && (
-            <button onClick={() => setGruposExpanded(!gruposExpanded)} className="flex items-center justify-between px-2 pb-1 w-full text-left">
-              <span className="text-xs text-[#4A6A7A]">{t('dash_groups')}</span>
-              <span className="text-xs text-[#4A6A7A]">{gruposExpanded ? '▲' : '▼'}</span>
-            </button>
-          )}
-          {gruposExpanded && (
-            <div className="flex flex-col gap-0.5 overflow-y-auto max-h-40">
-              {grupos.length === 0 && sidebarOpen && <p className="text-xs px-2 py-1 text-[#4A6A7A]">{t('dash_no_groups')}</p>}
-              {grupos.map(grupo => (
-                <Link key={grupo.id} href={`/grupos/${grupo.id}`} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[#1E2D3D] transition w-full text-left">
-                  <div className="w-2 h-2 rounded-full flex-shrink-0 bg-[#3D8B7A]" />
-                  {sidebarOpen && <span className="text-sm text-[#8A9BAA] truncate">{grupo.nombre}</span>}
-                </Link>
-              ))}
-            </div>
-          )}
-          <button onClick={() => setActiveModal('nuevoGrupo')} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[#1E2D3D] transition w-full text-left mt-1 text-[#2A6496]">
-            <span className="text-base flex-shrink-0">＋</span>
-            {sidebarOpen && <span className="text-sm truncate">{t('dash_new_group')}</span>}
-          </button>
-          <button onClick={() => setActiveModal('agregarAmigo')} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[#1E2D3D] transition w-full text-left text-[#2A6496]">
-            <span className="text-base flex-shrink-0">👤</span>
-            {sidebarOpen && <span className="text-sm truncate">{lang === 'es' ? 'Agregar amigo' : 'Add friend'}</span>}
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2.5 px-3 py-3 border-t border-[#1E2D3D] cursor-pointer hover:bg-[#1E2D3D] transition" onClick={handleLogout} title={t('dash_logout')}>
-          <div className="w-8 h-8 rounded-full bg-[#1E2D3D] flex items-center justify-center text-xs font-medium text-[#3D8B7A] flex-shrink-0">
-            {user ? getInitials(user.nombre) : '??'}
-          </div>
-          {sidebarOpen && user && (
-            <div className="overflow-hidden">
-              <p className="text-sm font-medium text-[#E8E0D5] truncate">{user.nombre}</p>
-              <p className="text-xs text-[#4A6A7A] truncate">{user.email}</p>
-            </div>
-          )}
-        </div>
-      </aside>
+      <Sidebar 
+        isDemo={isDemo} 
+        user={user} 
+        grupos={grupos} 
+        onToggle={() => setSidebarOpen(!sidebarOpen)} 
+        isOpen={sidebarOpen} 
+      />
 
       <main className={`flex-1 overflow-y-auto p-6 ${isDemo ? 'mt-8' : ''}`}>
         <div className="flex items-start justify-between mb-6">
