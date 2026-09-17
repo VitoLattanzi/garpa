@@ -133,7 +133,6 @@ export default function LoginPage() {
               : (lang === 'es' ? '¿Olvidaste tu contraseña?' : 'Forgot password?')}
           </button>
         </div>
-        </div>
 
         {error && (
           <p className="text-red-500 text-sm">{error === 'login_error' ? t('login_error') : error}</p>
