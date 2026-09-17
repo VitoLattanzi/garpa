@@ -118,22 +118,46 @@ export default function ModalNuevoGrupo({ onClose, onCreated, amigos, userId, is
             <label className="block text-xs text-[#4A6A7A] mb-1.5">
               {lang === 'es' ? 'Agregar amigos' : 'Add friends'}
             </label>
+            
+            {/* Lista desplegable para seleccionar */}
+            <select
+              className="w-full bg-[#0F1923] border border-[#1E2D3D] rounded-lg px-3 py-2.5 text-sm text-[#E8E0D5] mb-2 outline-none focus:border-[#3D8B7A] transition"
+              onChange={(e) => {
+                if (e.target.value) {
+                  toggleAmigo(e.target.value)
+                  e.target.value = '' // Reset
+                }
+              }}
+              value=""
+            >
+              <option value="" disabled>
+                {lang === 'es' ? 'Seleccionar amigo...' : 'Select friend...'}
+              </option>
+              {amigos
+                .filter(a => !selectedAmigos.includes(a.amigo_id))
+                .map(amigo => (
+                  <option key={amigo.id} value={amigo.amigo_id}>
+                    {amigo.perfil.nombre}
+                  </option>
+                ))
+              }
+            </select>
+
+            {/* Badges de amigos seleccionados */}
             <div className="flex flex-wrap gap-2">
-              {amigos.map(amigo => (
-                <button
-                  key={amigo.id}
-                  onClick={() => toggleAmigo(amigo.amigo_id)}
-                  className={`
-                    px-3 py-1.5 rounded-full text-xs border transition
-                    ${selectedAmigos.includes(amigo.amigo_id)
-                      ? 'border-[#3D8B7A] text-[#3D8B7A] bg-[#3D8B7A]/10'
-                      : 'border-[#1E2D3D] text-[#8A9BAA]'
-                    }
-                  `}
-                >
-                  {amigo.perfil.nombre}
-                </button>
-              ))}
+              {amigos
+                .filter(a => selectedAmigos.includes(a.amigo_id))
+                .map(amigo => (
+                  <button
+                    key={amigo.id}
+                    onClick={() => toggleAmigo(amigo.amigo_id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border border-[#3D8B7A] text-[#3D8B7A] bg-[#3D8B7A]/10 transition"
+                  >
+                    {amigo.perfil.nombre}
+                    <span>×</span>
+                  </button>
+                ))
+              }
             </div>
           </div>
         )}

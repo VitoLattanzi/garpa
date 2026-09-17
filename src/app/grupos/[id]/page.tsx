@@ -14,13 +14,19 @@ export default function GroupDashboardPage({ params }: { params: Promise<{ id: s
 
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'resumen' | 'config'>('resumen')
-  const [grupo, setGrupo] = useState<{ id: string; nombre: string } | null>(null)
+  const [grupo, setGrupo] = useState<{ id: string; nombre: string; creado_por: string } | null>(null)
   const [gastos, setGastos] = useState<any[]>([])
   const [miembros, setMiembros] = useState<any[]>([])
   const [nombre, setNombre] = useState('')
+  const [userId, setUserId] = useState<string | null>(null)
+  const [userRole, setUserRole] = useState<string | null>(null)
 
   useEffect(() => {
     async function loadData() {
+      // Obtener usuario
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) setUserId(user.id)
+
       // 1. Grupo
       const { data: g } = await supabase.from('grupos').select('*').eq('id', groupId).single()
       if (g) {
@@ -36,17 +42,49 @@ export default function GroupDashboardPage({ params }: { params: Promise<{ id: s
         .order('fecha', { ascending: false })
       if (gts) setGastos(gts)
 
-      // 3. Miembros
+      // 3. Miembros y mi rol
       const { data: m } = await supabase
         .from('miembros_grupo')
-        .select('usuario_id, usuarios(nombre, email)')
+        .select('usuario_id, rol, usuarios(nombre, email)')
         .eq('grupo_id', groupId)
-      if (m) setMiembros(m)
+      
+      if (m) {
+        setMiembros(m)
+        if (user) {
+          const miRegistro = m.find(mi => mi.usuario_id === user.id)
+          if (miRegistro) setUserRole(miRegistro.rol)
+        }
+      }
 
       setLoading(false)
     }
     loadData()
   }, [groupId, supabase])
+
+  async function handleLeaveGroup() {
+    if (!userId || !confirm(lang === 'es' ? '¿Estás seguro de que quieres salir del grupo?' : 'Are you sure you want to leave the group?')) return
+
+    await supabase
+      .from('miembros_grupo')
+      .delete()
+      .eq('grupo_id', groupId)
+      .eq('usuario_id', userId)
+
+    router.push('/dashboard')
+  }
+
+  async function handleDeleteGroup() {
+    if (!confirm(lang === 'es' ? '¿Estás seguro de que quieres eliminar el grupo? Esta acción no se puede deshacer.' : 'Are you sure you want to delete the group? This action cannot be undone.')) return
+
+    // Borramos datos dependientes primero
+    await supabase.from('deudas').delete().eq('grupo_id', groupId)
+    await supabase.from('participantes_gasto').delete().eq('grupo_id', groupId)
+    await supabase.from('gastos').delete().eq('grupo_id', groupId)
+    await supabase.from('miembros_grupo').delete().eq('grupo_id', groupId)
+    await supabase.from('grupos').delete().eq('id', groupId)
+
+    router.push('/dashboard')
+  }
 
   if (loading) return <div className="p-6 text-[#4A6A7A]">Cargando...</div>
 
@@ -106,8 +144,25 @@ export default function GroupDashboardPage({ params }: { params: Promise<{ id: s
             <h2 className="text-sm mb-4 text-[#8A9BAA]">{lang === 'es' ? 'Miembros' : 'Members'}</h2>
             <div className="bg-[#172130] border border-[#1E2D3D] rounded-xl">
               {miembros.map(m => (
-                <div key={m.usuario_id} className="px-4 py-3 border-b border-[#1E2D3D] text-sm">{m.usuarios?.nombre}</div>
+                <div key={m.usuario_id} className="px-4 py-3 border-b border-[#1E2D3D] last:border-0 text-sm">{m.usuarios?.nombre}</div>
               ))}
+            </div>
+            <div className="flex flex-col gap-2">
+              <button 
+                onClick={handleLeaveGroup}
+                className="text-xs text-[#C0675A] hover:underline"
+              >
+                {lang === 'es' ? 'Salir del grupo' : 'Leave group'}
+              </button>
+              
+              {userRole === 'admin' && (
+                <button 
+                  onClick={handleDeleteGroup}
+                  className="text-xs text-red-500 hover:underline font-medium"
+                >
+                  {lang === 'es' ? 'Eliminar grupo' : 'Delete group'}
+                </button>
+              )}
             </div>
           </div>
         </div>
