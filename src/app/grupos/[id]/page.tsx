@@ -9,6 +9,7 @@ import { useLang } from '@/context/LangContext'
 export default function GroupDashboardPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params)
   const groupId = resolvedParams.id
+  const router = useRouter()
   const supabase = createSupabaseBrowserClient()
   const { lang } = useLang()
 
