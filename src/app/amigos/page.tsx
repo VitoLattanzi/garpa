@@ -10,11 +10,11 @@ export default function AmigosPage() {
   const supabase = createSupabaseBrowserClient()
   
   const [loading, setLoading] = useState(true)
-  const [amigos, setAmigos] = useState<any[]>([]) // Simplificado para visualización
+  const [amigos, setAmigos] = useState<any[]>([]) 
+  const [invitacionesRecibidas, setInvitacionesRecibidas] = useState<any[]>([])
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [friendEmail, setFriendEmail] = useState('')
   const [myUserId, setMyUserId] = useState<string | null>(null)
-
-  const [invitaciones, setInvitaciones] = useState<any[]>([])
-  const [cooldown, setCooldown] = useState<Record<string, number>>({})
 
   useEffect(() => {
     async function fetchData() {
@@ -33,11 +33,15 @@ export default function AmigosPage() {
         .eq('usuario_id', user.id)
         .eq('estado', 'activo')
 
-      // 2. Fetch invitaciones
+      // 2. Fetch invitaciones recibidas
       const { data: rawInvitaciones } = await supabase
         .from('invitaciones')
-        .select('*')
-        .eq('invitado_por', user.id)
+        .select(`
+          id,
+          solicitante:usuarios!invitaciones_solicitante_id_fkey(nombre, email)
+        `)
+        .eq('invitado_id', user.id)
+        .eq('estado', 'pendiente')
 
       // 3. Fetch deudas
       const { data: deudas } = await supabase
@@ -58,29 +62,55 @@ export default function AmigosPage() {
           return { ...a, balance }
         })
 
-        // Ordenar: Deben (positivo) -> Debo (negativo) -> Saldado (0)
         amigosConBalance.sort((a, b) => b.balance - a.balance)
         setAmigos(amigosConBalance)
       }
       
-      if (rawInvitaciones) setInvitaciones(rawInvitaciones)
+      if (rawInvitaciones) setInvitacionesRecibidas(rawInvitaciones)
       
       setLoading(false)
     }
     fetchData()
-  }, [])
+  }, [supabase])
 
-  async function handleResendInvite(email: string, id: string) {
-    const lastSent = cooldown[id] || 0
-    if (Date.now() - lastSent < 60000) {
-      alert(lang === 'es' ? 'Esperá un minuto antes de reenviar.' : 'Wait a minute before resending.')
+  async function handleAddFriend() {
+    // Buscar usuario por email
+    const { data: targetUser } = await supabase
+      .from('usuarios')
+      .select('id')
+      .eq('email', friendEmail)
+      .single()
+
+    if (!targetUser) {
+      alert(lang === 'es' ? 'Usuario no encontrado' : 'User not found')
       return
     }
 
-    setCooldown(prev => ({ ...prev, [id]: Date.now() }))
-    // Re-trigger email via Supabase Auth or custom API endpoint
-    await supabase.auth.signUp({ email, password: Math.random().toString(36).slice(-10) })
-    alert(lang === 'es' ? 'Invitación reenviada.' : 'Invitation resent.')
+    // Crear invitacion
+    await supabase.from('invitaciones').insert({
+      solicitante_id: myUserId,
+      invitado_id: targetUser.id,
+      estado: 'pendiente'
+    })
+
+    alert(lang === 'es' ? 'Invitación enviada' : 'Invitation sent')
+    setShowAddModal(false)
+    setFriendEmail('')
+  }
+
+  async function handleAccept(invitacionId: string, solicitanteId: string) {
+    // 1. Crear amistad bidireccional (o unidireccional según convención del proyecto)
+    // Asumiremos que es un registro por amistad
+    await supabase.from('amistades').insert([
+        { usuario_id: myUserId, amigo_id: solicitanteId, estado: 'activo' },
+        { usuario_id: solicitanteId, amigo_id: myUserId, estado: 'activo' }
+    ])
+
+    // 2. Actualizar estado invitacion
+    await supabase.from('invitaciones').update({ estado: 'aceptada' }).eq('id', invitacionId)
+
+    // Recargar
+    window.location.reload()
   }
 
   async function handleDelete(amigoId: string, balance: number, friendEmail: string) {
@@ -123,15 +153,69 @@ export default function AmigosPage() {
       </a>
       
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold text-[#E8E0D5]">
-          {lang === 'es' ? 'Tus amigos' : 'Your friends'}
-        </h1>
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-[#E8E0D5]">
+            {lang === 'es' ? 'Tus amigos' : 'Your friends'}
+          </h1>
+          <button 
+            onClick={() => setShowAddModal(true)}
+            className="bg-[#3D8B7A] text-[#0F1923] text-sm px-4 py-2 rounded-lg font-medium hover:opacity-90"
+          >
+            {lang === 'es' ? '+ Agregar amigo' : '+ Add friend'}
+          </button>
+        </div>
         <p className="text-sm text-[#4A6A7A]">
           {lang === 'es' 
             ? 'Gestioná tus contactos y verificá quién te debe o a quién le debés.' 
             : 'Manage your contacts and check who owes you or who you owe.'}
         </p>
       </div>
+
+      {/* Modal Add Friend */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-[#172130] p-6 rounded-xl border border-[#1E2D3D] w-full max-w-sm">
+             <h2 className="text-lg font-bold text-[#E8E0D5] mb-4">
+                {lang === 'es' ? 'Agregar amigo' : 'Add friend'}
+             </h2>
+             <input 
+                type="email"
+                placeholder="Email"
+                value={friendEmail}
+                onChange={e => setFriendEmail(e.target.value)}
+                className="w-full bg-[#0F1923] border border-[#1E2D3D] rounded-lg px-4 py-2 text-sm text-[#E8E0D5] mb-4"
+             />
+             <div className="flex gap-2">
+               <button onClick={() => setShowAddModal(false)} className="flex-1 px-4 py-2 rounded-lg text-sm bg-[#1E2D3D] text-[#8A9BAA]">
+                  {lang === 'es' ? 'Cancelar' : 'Cancel'}
+               </button>
+               <button onClick={handleAddFriend} className="flex-1 px-4 py-2 rounded-lg text-sm bg-[#3D8B7A] text-[#0F1923]">
+                  {lang === 'es' ? 'Enviar' : 'Send'}
+               </button>
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Solicitudes de amistad */}
+      {invitacionesRecibidas.length > 0 && (
+        <div className="mb-6">
+           <h2 className="text-sm font-bold text-[#E8E0D5] mb-3">{lang === 'es' ? 'Solicitudes pendientes' : 'Pending requests'}</h2>
+           <div className="flex flex-col gap-2">
+             {invitacionesRecibidas.map(inv => (
+                <div key={inv.id} className="flex justify-between items-center bg-[#172130] p-3 rounded-lg border border-[#1E2D3D]">
+                   <span className="text-sm text-[#E8E0D5]">{inv.solicitante.nombre}</span>
+                   <button 
+                     onClick={() => handleAccept(inv.id, inv.solicitante.id)}
+                     className="text-xs bg-[#3D8B7A] text-[#0F1923] px-3 py-1 rounded-full font-medium"
+                   >
+                     {lang === 'es' ? 'Aceptar' : 'Accept'}
+                   </button>
+                </div>
+             ))}
+           </div>
+        </div>
+      )}
       
       {amigos.length === 0 ? (
         <div className="bg-[#172130] border border-[#1E2D3D] rounded-2xl p-8 text-center">
