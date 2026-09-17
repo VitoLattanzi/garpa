@@ -133,26 +133,6 @@ export default function AmigosPage() {
         </p>
       </div>
       
-      {/* Sección Invitaciones Pendientes */}
-      {invitaciones.length > 0 && (
-        <div className="flex flex-col gap-2 mt-4">
-          <h2 className="text-sm font-medium text-[#4A6A7A] uppercase tracking-wider">
-            {lang === 'es' ? 'Invitaciones enviadas' : 'Invitations sent'}
-          </h2>
-          {invitaciones.map((inv) => (
-            <div key={inv.id} className="flex items-center justify-between p-3 bg-[#1E2D3D]/50 border border-[#1E2D3D] rounded-xl">
-              <span className="text-sm text-[#E8E0D5]">{inv.email_invitado}</span>
-              <button 
-                onClick={() => handleResendInvite(inv.email_invitado, inv.id)}
-                className="text-xs text-[#3D8B7A] hover:underline"
-              >
-                {lang === 'es' ? 'Reenviar' : 'Resend'}
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
       {amigos.length === 0 ? (
         <div className="bg-[#172130] border border-[#1E2D3D] rounded-2xl p-8 text-center">
           <p className="text-[#8A9BAA]">

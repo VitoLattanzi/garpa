@@ -119,7 +119,7 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
 
   /**
    * Paso 2b — Envía una invitación a alguien que no está registrado
-   * Guarda la invitación en la DB y manda el email via Supabase Auth
+   * Llama a la API /api/invite para guardar en DB y enviar email via Resend (EmailInvitacion.tsx)
    */
   async function handleInvitar() {
     setLoading(true)
@@ -142,32 +142,39 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
       return
     }
 
-    // Guardamos la invitación en la DB
-    const { error: invError } = await supabase
-      .from('invitaciones')
-      .insert({
-        invitado_por: userId,
-        email_invitado: email.trim().toLowerCase(),
+    // Obtener el perfil del usuario actual para enviar su nombre en la invitación
+    const { data: perfilUsuario } = await supabase
+      .from('usuarios')
+      .select('nombre')
+      .eq('id', userId)
+      .maybeSingle()
+
+    const nombreInvitador = perfilUsuario?.nombre || (lang === 'es' ? 'Un amigo' : 'A friend')
+
+    try {
+      const res = await fetch('/api/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          emailInvitado: email.trim().toLowerCase(),
+          usuarioInvitadorId: userId,
+          nombreInvitador,
+        }),
       })
 
-    if (invError) {
+      const result = await res.json()
+
+      if (!res.ok || !result.success) {
+        throw new Error(result.error || 'Error al enviar invitación')
+      }
+
+      setEstado('invitado')
+    } catch (err: any) {
+      console.error('Error enviando invitación:', err)
       setError(lang === 'es' ? 'Error al enviar la invitación' : 'Error sending invitation')
+    } finally {
       setLoading(false)
-      return
     }
-
-    // Mandamos el email de invitación via Supabase Auth
-    await supabase.auth.signUp({
-      email: email.trim().toLowerCase(),
-      password: Math.random().toString(36).slice(-10), // password temporal
-      options: {
-        emailRedirectTo: `${window.location.origin}/register`,
-        data: { invitado: true }
-      },
-    })
-
-    setEstado('invitado')
-    setLoading(false)
   }
 
   return (
