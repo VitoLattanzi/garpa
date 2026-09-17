@@ -345,10 +345,10 @@ export default function DashboardPage() {
             <div className="flex flex-col gap-0.5 overflow-y-auto max-h-40">
               {grupos.length === 0 && sidebarOpen && <p className="text-xs px-2 py-1 text-[#4A6A7A]">{t('dash_no_groups')}</p>}
               {grupos.map(grupo => (
-                <button key={grupo.id} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[#1E2D3D] transition w-full text-left">
+                <Link key={grupo.id} href={`/grupos/${grupo.id}`} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[#1E2D3D] transition w-full text-left">
                   <div className="w-2 h-2 rounded-full flex-shrink-0 bg-[#3D8B7A]" />
                   {sidebarOpen && <span className="text-sm text-[#8A9BAA] truncate">{grupo.nombre}</span>}
-                </button>
+                </Link>
               ))}
             </div>
           )}
