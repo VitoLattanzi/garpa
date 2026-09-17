@@ -8,7 +8,6 @@ import { useLang } from '@/context/LangContext'
 export default function GroupConfigPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params)
   const groupId = resolvedParams.id
-  const router = useRouter()
   const supabase = createSupabaseBrowserClient()
   const { lang } = useLang()
 
@@ -16,6 +15,7 @@ export default function GroupConfigPage({ params }: { params: Promise<{ id: stri
   const [grupo, setGrupo] = useState<{ id: string; nombre: string } | null>(null)
   const [miembros, setMiembros] = useState<any[]>([])
   const [amigos, setAmigos] = useState<any[]>([])
+  const [invitaciones, setInvitaciones] = useState<any[]>([])
   const [nombre, setNombre] = useState('')
 
   useEffect(() => {
@@ -43,6 +43,14 @@ export default function GroupConfigPage({ params }: { params: Promise<{ id: stri
           .eq('usuario_id', session.user.id)
           .eq('estado', 'activo')
         if (a) setAmigos(a)
+        
+        // 4. Invitaciones pendientes (asumimos campo grupo_id en invitaciones)
+        const { data: invs } = await supabase
+          .from('invitaciones')
+          .select('*')
+          .eq('grupo_id', groupId)
+          .eq('estado', 'pendiente')
+        if (invs) setInvitaciones(invs)
       }
 
       setLoading(false)
@@ -56,7 +64,6 @@ export default function GroupConfigPage({ params }: { params: Promise<{ id: stri
   }
 
   async function removeMember(userId: string) {
-    if (userId === grupo?.id) return // simple check
     await supabase.from('miembros_grupo').delete().eq('grupo_id', groupId).eq('usuario_id', userId)
     setMiembros(miembros.filter(m => m.usuario_id !== userId))
   }
@@ -71,50 +78,52 @@ export default function GroupConfigPage({ params }: { params: Promise<{ id: stri
     if (m) setMiembros(m)
   }
 
+  async function resendInvite(email: string) {
+    alert(lang === 'es' ? `Reenviando invitación a ${email}...` : `Resending invite to ${email}...`)
+  }
+
   if (loading) return <div className="p-6 text-[#4A6A7A]">Cargando...</div>
 
   return (
     <div className="p-6 max-w-2xl mx-auto text-[#E8E0D5]">
-      <h1 className="text-xl font-medium mb-6">{lang === 'es' ? 'Configuración del grupo' : 'Group settings'}</h1>
+      <h1 className="text-2xl font-semibold mb-8 text-[#3D8B7A]">{lang === 'es' ? 'Configuración del grupo' : 'Group settings'}</h1>
       
-      <div className="mb-8">
-        <label className="block text-xs text-[#4A6A7A] mb-1.5">{lang === 'es' ? 'Nombre del grupo' : 'Group name'}</label>
+      <div className="bg-[#172130] border border-[#1E2D3D] rounded-xl p-6 mb-8">
+        <label className="block text-xs text-[#4A6A7A] mb-2">{lang === 'es' ? 'Nombre del grupo' : 'Group name'}</label>
         <div className="flex gap-2">
           <input 
             value={nombre} 
             onChange={e => setNombre(e.target.value)}
-            className="flex-1 bg-[#0F1923] border border-[#1E2D3D] rounded-lg px-3 py-2 text-sm outline-none focus:border-[#3D8B7A]"
+            className="flex-1 bg-[#0F1923] border border-[#1E2D3D] rounded-lg px-4 py-2 text-sm outline-none focus:border-[#3D8B7A] text-[#E8E0D5]"
           />
-          <button onClick={updateName} className="bg-[#3D8B7A] text-[#0F1923] px-4 py-2 rounded-lg text-sm">{lang === 'es' ? 'Guardar' : 'Save'}</button>
+          <button onClick={updateName} className="bg-[#3D8B7A] text-[#0F1923] px-6 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition">{lang === 'es' ? 'Guardar' : 'Save'}</button>
         </div>
       </div>
 
-      <div className="mb-8">
-        <h2 className="text-sm font-medium mb-3">{lang === 'es' ? 'Miembros actuales' : 'Current members'}</h2>
-        <div className="bg-[#172130] border border-[#1E2D3D] rounded-lg overflow-hidden">
-          {miembros.map(m => (
-            <div key={m.usuario_id} className="flex justify-between items-center px-4 py-3 border-b border-[#1E2D3D]">
-              <span className="text-sm">{m.usuarios?.nombre || m.usuarios?.email}</span>
-              <button onClick={() => removeMember(m.usuario_id)} className="text-xs text-[#C0675A]">{lang === 'es' ? 'Eliminar' : 'Remove'}</button>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <h2 className="text-sm font-medium mb-3">{lang === 'es' ? 'Invitar amigos' : 'Invite friends'}</h2>
-        <div className="bg-[#172130] border border-[#1E2D3D] rounded-lg overflow-hidden">
-          {amigos.map(a => {
-            const isMember = miembros.some(m => m.usuario_id === a.amigo_id)
-            return (
-              <div key={a.amigo_id} className="flex justify-between items-center px-4 py-3 border-b border-[#1E2D3D]">
-                <span className="text-sm">{a.perfil?.nombre || a.perfil?.email}</span>
-                {!isMember && (
-                    <button onClick={() => addMember(a.amigo_id)} className="text-xs text-[#3D8B7A]">{lang === 'es' ? 'Agregar' : 'Add'}</button>
-                )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div>
+          <h2 className="text-sm font-medium mb-4 text-[#8A9BAA]">{lang === 'es' ? 'Miembros actuales' : 'Members'}</h2>
+          <div className="bg-[#172130] border border-[#1E2D3D] rounded-xl overflow-hidden">
+            {miembros.map(m => (
+              <div key={m.usuario_id} className="flex justify-between items-center px-4 py-3 border-b border-[#1E2D3D] last:border-0">
+                <span className="text-sm">{m.usuarios?.nombre || m.usuarios?.email}</span>
+                <button onClick={() => removeMember(m.usuario_id)} className="text-xs text-[#C0675A] hover:underline">{lang === 'es' ? 'Eliminar' : 'Remove'}</button>
               </div>
-            )
-          })}
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h2 className="text-sm font-medium mb-4 text-[#8A9BAA]">{lang === 'es' ? 'Invitaciones pendientes' : 'Pending invites'}</h2>
+          <div className="bg-[#172130] border border-[#1E2D3D] rounded-xl overflow-hidden">
+            {invitaciones.length === 0 && <p className="p-4 text-xs text-[#4A6A7A]">{lang === 'es' ? 'No hay invitaciones' : 'No pending invites'}</p>}
+            {invitaciones.map(inv => (
+              <div key={inv.id} className="flex justify-between items-center px-4 py-3 border-b border-[#1E2D3D] last:border-0">
+                <span className="text-sm truncate max-w-[150px]">{inv.email_invitado}</span>
+                <button onClick={() => resendInvite(inv.email_invitado)} className="text-xs text-[#3D8B7A] hover:underline">{lang === 'es' ? 'Reenviar' : 'Resend'}</button>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

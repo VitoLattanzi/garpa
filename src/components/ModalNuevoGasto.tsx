@@ -371,6 +371,33 @@ export default function ModalNuevoGasto({ onClose, onCreated, grupos, amigos, us
           </div>
         )}
 
+        {/* Breakdown visual */}
+        {participantes.length > 0 && (
+          <div className="mb-4 bg-[#0F1923] border border-[#1E2D3D] rounded-xl p-4">
+            <h4 className="text-xs text-[#4A6A7A] mb-3">Distribución</h4>
+            <div className="h-2 w-full bg-[#172130] rounded-full flex overflow-hidden">
+              {participantes.map((p, i) => (
+                <div
+                  key={p.usuario_id}
+                  style={{ width: `${p.porcentaje}%` }}
+                  className={`${i % 2 === 0 ? 'bg-[#3D8B7A]' : 'bg-[#4A6A7A]'} transition-all`}
+                />
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-2 mt-3">
+              {participantes.map(p => (
+                <div key={p.usuario_id} className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-[#3D8B7A]" />
+                  <span className="text-[10px] text-[#8A9BAA] truncate">{p.nombre}</span>
+                  <span className="text-[10px] text-[#E8E0D5] ml-auto">
+                    ${p.monto.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Participantes */}
         <div className="mb-4">
           <label className="block text-xs text-[#4A6A7A] mb-2">
@@ -384,10 +411,10 @@ export default function ModalNuevoGasto({ onClose, onCreated, grupos, amigos, us
                   key={m.usuario_id}
                   type="button"
                   onClick={() => toggleParticipant(m.usuario_id)}
-                  className={`px-3 py-1.5 rounded-full text-xs border transition ${
+                  className={`px-3 py-1.5 rounded-lg text-xs border transition ${
                     isSelected
-                      ? 'border-[#3D8B7A] text-[#3D8B7A] bg-[#3D8B7A]/10'
-                      : 'border-[#1E2D3D] text-[#8A9BAA]'
+                      ? 'border-[#3D8B7A] text-[#3D8B7A] bg-[#3D8B7A]/20'
+                      : 'border-[#1E2D3D] text-[#4A6A7A] bg-[#0F1923]'
                   }`}
                 >
                   {m.nombre}
