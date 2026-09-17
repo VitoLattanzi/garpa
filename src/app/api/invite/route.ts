@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
-import { renderToStaticMarkup } from 'react-dom/server'
 import EmailInvitacion from '@/components/EmailInvitacion'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 
@@ -25,20 +24,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Error guardando en BD' }, { status: 500 })
     }
 
-    // 2. Generar el HTML del email
-    const emailHtml = renderToStaticMarkup(
-      EmailInvitacion({
-        nombreInvitador: nombreInvitador,
-        linkInvitacion: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://garpa.vercel.app'}/register`
-      })
-    )
-
-    // 3. Enviar email
+    // 2 & 3. Enviar email usando la propiedad "react" nativa de Resend
     const { error: emailError } = await resend.emails.send({
       from: 'Garpa <onboarding@resend.dev>',
       to: emailInvitado,
       subject: `${nombreInvitador} te invitó a Garpa`,
-      html: emailHtml
+      react: EmailInvitacion({
+        nombreInvitador: nombreInvitador,
+        linkInvitacion: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://garpa.vercel.app'}/register`
+      })
     })
 
     if (emailError) {
