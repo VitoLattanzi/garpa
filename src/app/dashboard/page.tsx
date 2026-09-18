@@ -46,7 +46,7 @@ export default function DashboardPage() {
   const [gastos, setGastos] = useState<Gasto[]>([])
   const [amigos, setAmigos] = useState<Amigo[]>([])
   const [gruposExpanded, setGruposExpanded] = useState(true)
-  const [activeModal, setActiveModal] = useState<'debo' | 'meDeban' | 'nuevoGrupo' | 'nuevoGasto' | 'agregarAmigo' | null>(null)
+  const [activeModal, setActiveModal] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [isDemo, setIsDemo] = useState(false)
 
@@ -310,14 +310,15 @@ export default function DashboardPage() {
       )}
 
       <Sidebar 
-        isDemo={isDemo} 
-        user={user} 
-        grupos={grupos} 
-      />
+        isDemo={isDemo}
+        user={user}
+        grupos={grupos}
+        onOpenModal={(modal) => setActiveModal(modal)} 
+      />w
 
       <main className={`flex-1 overflow-y-auto p-6 ${isDemo ? 'mt-8' : ''}`}>
         <div className="flex items-start justify-between mb-6">
-          <div>
+          <div>                     
             <h1 className="text-lg font-medium text-[#E8E0D5]">
               {t('dash_greeting')}{user ? `, ${user.nombre.split(' ')[0]}` : ''} 👋
             </h1>

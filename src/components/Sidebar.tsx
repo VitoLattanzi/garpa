@@ -5,9 +5,10 @@ type SidebarProps = {
   isDemo: boolean
   user: any
   grupos: any[]
+  onOpenModal: (modalName: string) => void
 }
 
-export default function Sidebar({ isDemo, user, grupos }: SidebarProps) {
+export default function Sidebar({ isDemo, user, grupos, onOpenModal }: SidebarProps) {
   const { t, lang } = useLang()
 
   return (
@@ -31,17 +32,33 @@ export default function Sidebar({ isDemo, user, grupos }: SidebarProps) {
             <span>👥</span>
             <span>{t('dash_friends')}</span>
           </Link>
+          <Link href="/gastos" className="flex items-center gap-3 px-3 py-2 text-[#8A9BAA] hover:text-[#E8E0D5] hover:bg-[#1E2D3D] rounded-lg">
+            <span>💳</span>
+            <span>{t('dash_expenses')}</span>
+          </Link>
         </nav>
 
         {/* Grupos */}
         <div className="px-4 pb-4">
-          <span className="text-xs text-[#4A6A7A] px-2 py-2 block">{lang === 'es' ? 'Grupos' : 'Groups'}</span>
+          <span className="text-xs text-[#4A6A7A] px-2 py-2 block">{t('dash_groups')}</span>
           <div className="flex flex-col gap-1">
             {grupos.map(g => (
               <Link key={g.id} href={`/grupos/${g.id}`} className="px-3 py-2 text-sm text-[#8A9BAA] hover:text-[#E8E0D5] hover:bg-[#1E2D3D] rounded-lg truncate">
                 {g.nombre}
               </Link>
             ))}
+            <button 
+              onClick={() => onOpenModal('nuevoGrupo')}
+              className="px-3 py-2 text-sm text-[#3D8B7A] hover:text-[#E8E0D5] hover:bg-[#1E2D3D] rounded-lg text-left"
+            >
+              + {t('dash_new_group')}
+            </button>
+            <button 
+              onClick={() => onOpenModal('agregarAmigo')}
+              className="px-3 py-2 text-sm text-[#3D8B7A] hover:text-[#E8E0D5] hover:bg-[#1E2D3D] rounded-lg text-left"
+            >
+              + {lang === 'es' ? 'Agregar amigo' : 'Add friend'}
+            </button>
           </div>
         </div>
 
