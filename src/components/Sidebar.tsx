@@ -43,8 +43,9 @@ export default function Sidebar({ isDemo, user, grupos, onOpenModal }: SidebarPr
           <span className="text-xs text-[#4A6A7A] px-2 py-2 block">{t('dash_groups')}</span>
           <div className="flex flex-col gap-1">
             {grupos.map(g => (
-              <Link key={g.id} href={`/grupos/${g.id}`} className="px-3 py-2 text-sm text-[#8A9BAA] hover:text-[#E8E0D5] hover:bg-[#1E2D3D] rounded-lg truncate">
-                {g.nombre}
+              <Link key={g.id} href={`/grupos/${g.id}`} className="flex items-center gap-2 px-3 py-2 text-sm text-[#8A9BAA] hover:text-[#E8E0D5] hover:bg-[#1E2D3D] rounded-lg truncate">
+                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: g.color || '#4A6A7A' }} />
+                <span className="truncate">{g.nombre}</span>
               </Link>
             ))}
             <button 

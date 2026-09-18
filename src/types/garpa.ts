@@ -12,6 +12,7 @@ export type Usuario = {
 export type Grupo = {
   id: string
   nombre: string
+  color?: string
 }
 
 export type Miembro = {

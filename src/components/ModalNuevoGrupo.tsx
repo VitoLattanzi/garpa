@@ -7,7 +7,7 @@ import { Amigo } from '@/types/garpa'
 
 type Props = {
   onClose: () => void
-  onCreated: (grupo: { id: string; nombre: string }) => void
+  onCreated: (grupo: { id: string; nombre: string; color?: string }) => void
   amigos: Amigo[]
   userId: string
   isDemo: boolean
@@ -23,9 +23,12 @@ export default function ModalNuevoGrupo({ onClose, onCreated, amigos, userId, is
   const supabase = createSupabaseBrowserClient()
 
   const [nombre, setNombre] = useState('')
+  const [color, setColor] = useState('#C0675A')
   const [selectedAmigos, setSelectedAmigos] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const COLORS = ['#C0675A', '#3D8B7A', '#D97706', '#9333EA', '#3B82F6', '#E11D48']
 
   // Alterna la selección de un amigo para el grupo
   function toggleAmigo(id: string) {
@@ -48,6 +51,7 @@ export default function ModalNuevoGrupo({ onClose, onCreated, amigos, userId, is
       const nuevoGrupo = {
         id: `demo-grupo-${Date.now()}`,
         nombre: nombre.trim(),
+        color: color
       }
       onCreated(nuevoGrupo)
       return
@@ -56,8 +60,8 @@ export default function ModalNuevoGrupo({ onClose, onCreated, amigos, userId, is
     // Modo real — creamos el grupo en Supabase
     const { data: grupo, error: grupoError } = await supabase
       .from('grupos')
-      .insert({ nombre: nombre.trim(), creado_por: userId })
-      .select('id, nombre')
+      .insert({ nombre: nombre.trim(), color, creado_por: userId })
+      .select('id, nombre, color')
       .single()
 
     if (grupoError || !grupo) {
@@ -110,6 +114,23 @@ export default function ModalNuevoGrupo({ onClose, onCreated, amigos, userId, is
             placeholder={lang === 'es' ? 'Ej: Viaje a Brasil' : 'E.g: Brazil trip'}
             className="w-full bg-[#0F1923] border border-[#1E2D3D] rounded-lg px-3 py-2.5 text-sm text-[#E8E0D5] outline-none focus:border-[#3D8B7A] transition"
           />
+        </div>
+
+        {/* Color del grupo */}
+        <div className="mb-4">
+          <label className="block text-xs text-[#4A6A7A] mb-2">
+            {lang === 'es' ? 'Color' : 'Color'}
+          </label>
+          <div className="flex gap-2">
+            {COLORS.map((c) => (
+              <button
+                key={c}
+                onClick={() => setColor(c)}
+                className={`w-6 h-6 rounded-full transition-transform ${color === c ? 'scale-125 ring-2 ring-white ring-offset-2 ring-offset-[#172130]' : 'hover:scale-110'}`}
+                style={{ backgroundColor: c }}
+              />
+            ))}
+          </div>
         </div>
 
         {/* Agregar amigos al grupo */}

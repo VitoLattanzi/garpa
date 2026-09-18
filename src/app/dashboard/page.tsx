@@ -3,13 +3,100 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { CreditCard } from 'lucide-react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useLang } from '@/context/LangContext'
 import { Grupo, Deuda, Gasto, Amigo } from '@/types/garpa'
-import ModalNuevoGrupo from '@/components/ModalNuevoGrupo'
-import ModalNuevoGasto from '@/components/ModalNuevoGasto'
-import ModalAgregarAmigo from '@/components/ModalAgregarAmigo'
-import Sidebar from '@/components/Sidebar'
+import DashboardLayout, { useDashboard } from '@/components/DashboardLayout'
+
+
+function DashboardContent({ 
+  user, userId, isDemo, handleLogout, deudasQueDebo, deudasQueMeDeben, totalDebo, totalMeDeben, balanceNeto, gastos, formatMonto, formatFecha, 
+}: any) {
+  const { t, lang } = useLang()
+  const { openModal } = useDashboard()
+
+  return (
+    <>
+        {isDemo && (
+        <div className="flex items-center justify-center gap-4 py-2 bg-[#3D8B7A] text-[#0F1923] text-xs font-medium">
+          <span>{t('demo_banner')}</span>
+          <button onClick={handleLogout} className="underline hover:no-underline">{t('demo_exit')}</button>
+        </div>
+      )}
+
+      <div className={`p-6 ${isDemo ? 'mt-0' : ''}`}>
+        <div className="flex items-start justify-between mb-6">
+          <div>                     
+            <h1 className="text-lg font-medium text-[#E8E0D5]">
+              {t('dash_greeting')}{user ? `, ${user.nombre.split(' ')[0]}` : ''} 👋
+            </h1>
+            <p className="text-sm text-[#4A6A7A]">
+              {deudasQueDebo.length > 0
+                ? `${deudasQueDebo.length} ${deudasQueDebo.length === 1 ? t('dash_debts_pending') : t('dash_debts_pending_plural')}`
+                : t('dash_all_good')}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => openModal('nuevoGasto')} className="text-xs bg-[#3D8B7A] text-[#0F1923] font-medium px-3 py-1.5 rounded-lg hover:opacity-90 transition">
+              {lang === 'es' ? '+ Nuevo gasto' : '+ New expense'}
+            </button>
+            <button onClick={() => {}} className="text-xs text-[#4A6A7A] hover:text-[#8A9BAA] transition border border-[#1E2D3D] px-2.5 py-1.5 rounded-lg">
+              {lang === 'es' ? 'EN' : 'ES'}
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          <button onClick={() => openModal('debo')} className="bg-[#172130] border border-[#1E2D3D] rounded-xl p-4 text-left hover:border-[#C0675A] transition">
+            <p className="text-xs text-[#4A6A7A] mb-1">{t('dash_owe')}</p>
+            <p className="text-2xl font-medium text-[#C0675A]">{formatMonto(totalDebo)}</p>
+            <p className="text-xs text-[#4A6A7A] mt-1">{deudasQueDebo.length} {deudasQueDebo.length === 1 ? t('dash_debts') : t('dash_debts_plural')}</p>
+          </button>
+          <button onClick={() => openModal('meDeban')} className="bg-[#172130] border border-[#1E2D3D] rounded-xl p-4 text-left hover:border-[#3D8B7A] transition">
+            <p className="text-xs text-[#4A6A7A] mb-1">{t('dash_owed')}</p>
+            <p className="text-2xl font-medium text-[#3D8B7A]">{formatMonto(totalMeDeben)}</p>
+            <p className="text-xs text-[#4A6A7A] mt-1">{deudasQueMeDeben.length} {deudasQueMeDeben.length === 1 ? t('dash_people') : t('dash_people_plural')}</p>
+          </button>
+          <div className="bg-[#172130] border border-[#1E2D3D] rounded-xl p-4">
+            <p className="text-xs text-[#4A6A7A] mb-1">{t('dash_balance')}</p>
+            <p className={`text-2xl font-medium ${balanceNeto >= 0 ? 'text-[#3D8B7A]' : 'text-[#C0675A]'}`}>
+              {balanceNeto >= 0 ? '+' : ''}{formatMonto(balanceNeto)}
+            </p>
+            <p className="text-xs text-[#4A6A7A] mt-1">{t('dash_general')}</p>
+          </div>
+        </div>
+
+        <h2 className="text-sm font-medium text-[#E8E0D5] mb-3">{t('dash_movements')}</h2>
+        <div className="flex flex-col gap-2">
+          {gastos.length === 0 && <p className="text-sm text-[#4A6A7A]">{t('dash_no_movements')}</p>}
+          {gastos.map((gasto: Gasto) => {
+            const yoPague = gasto.pagado_por === userId
+            return (
+              <div key={gasto.id} className="bg-[#172130] border border-[#1E2D3D] rounded-xl px-4 py-3 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-[#1E2D3D] flex items-center justify-center text-[#8A9BAA] shrink-0">
+                  <CreditCard size={18} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-[#E8E0D5] truncate">
+                    {gasto.descripcion}
+                    {gasto.grupos && <span className="text-[#4A6A7A]"> · {gasto.grupos.nombre}</span>}
+                  </p>
+                  <p className="text-xs text-[#4A6A7A]">
+                    {yoPague ? t('dash_you_paid') : `${t('dash_paid')} ${gasto.pagador?.nombre}`} · {formatFecha(gasto.fecha)}
+                  </p>
+                </div>
+                <span className={`text-sm font-medium ${yoPague ? 'text-[#3D8B7A]' : 'text-[#C0675A]'}`}>
+                  {yoPague ? '+' : '-'}{formatMonto(gasto.monto)}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </>
+  )
+}
 
 const DEMO_USER_ID = 'demo-user'
 const DEMO_GRUPOS: Grupo[] = [
@@ -46,7 +133,6 @@ export default function DashboardPage() {
   const [gastos, setGastos] = useState<Gasto[]>([])
   const [amigos, setAmigos] = useState<Amigo[]>([])
   const [gruposExpanded, setGruposExpanded] = useState(true)
-  const [activeModal, setActiveModal] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [isDemo, setIsDemo] = useState(false)
 
@@ -183,7 +269,6 @@ export default function DashboardPage() {
       setDeudas(deudasGuardadas ? [...DEMO_DEUDAS_INICIALES, ...JSON.parse(deudasGuardadas)] : DEMO_DEUDAS_INICIALES)
       const gastosGuardados = sessionStorage.getItem('demo-gastos')
       setGastos(gastosGuardados ? [...JSON.parse(gastosGuardados), ...DEMO_GASTOS_INICIALES] : DEMO_GASTOS_INICIALES)
-      setActiveModal(null)
       return
     }
     const { data: { session } } = await supabase.auth.getSession()
@@ -224,13 +309,12 @@ export default function DashboardPage() {
         const pagadorIds = [...new Set(gastosData.map((g: any) => g.pagado_por))]
         const { data: pagadoresData } = await supabase.from('usuarios').select('id, nombre').in('id', pagadorIds)
         const grupoIdsGastos = gastosData.map((g: any) => g.grupo_id).filter(Boolean)
-        const { data: gruposGastos } = grupoIdsGastos.length > 0 ? await supabase.from('grupos').select('id, nombre').in('id', grupoIdsGastos) : { data: [] }
+        const { data: gruposGastos } = grupoIdsGastos.length > 0 ? await supabase.from('gastos').select('id, nombre').in('id', grupoIdsGastos) : { data: [] }
         setGastos(gastosData.map((g: any) => ({ ...g, pagador: { nombre: pagadoresData?.find((p: any) => p.id === g.pagado_por)?.nombre ?? '' }, grupos: gruposGastos?.find((gr: any) => gr.id === g.grupo_id) ?? null })) as any)
       }
     } else {
       setGastos([])
     }
-    setActiveModal(null)
   }
 
   function onGrupoCreado(grupo: Grupo) {
@@ -239,7 +323,6 @@ export default function DashboardPage() {
       sessionStorage.setItem('demo-grupos', JSON.stringify([...prev, grupo]))
     }
     setGrupos(prev => [...prev, grupo])
-    setActiveModal(null)
   }
 
   function onAmigoAgregado(amigo: { id: string; nombre: string; email: string }) {
@@ -248,7 +331,6 @@ export default function DashboardPage() {
       perfil: { nombre: amigo.nombre, email: amigo.email },
     }
     setAmigos(prev => [...prev, nuevoAmigo])
-    setActiveModal(null)
   }
 
   async function saldarDeuda(deudaId: string) {
@@ -300,153 +382,35 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#0F1923]">
-
-      {isDemo && (
-        <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center gap-4 py-2 bg-[#3D8B7A] text-[#0F1923] text-xs font-medium">
-          <span>{t('demo_banner')}</span>
-          <button onClick={handleLogout} className="underline hover:no-underline">{t('demo_exit')}</button>
-        </div>
-      )}
-
-      <Sidebar 
-        isDemo={isDemo}
-        user={user}
-        grupos={grupos}
-        onOpenModal={(modal) => setActiveModal(modal)} 
-      />w
-
-      <main className={`flex-1 overflow-y-auto p-6 ${isDemo ? 'mt-8' : ''}`}>
-        <div className="flex items-start justify-between mb-6">
-          <div>                     
-            <h1 className="text-lg font-medium text-[#E8E0D5]">
-              {t('dash_greeting')}{user ? `, ${user.nombre.split(' ')[0]}` : ''} 👋
-            </h1>
-            <p className="text-sm text-[#4A6A7A]">
-              {deudasQueDebo.length > 0
-                ? `${deudasQueDebo.length} ${deudasQueDebo.length === 1 ? t('dash_debts_pending') : t('dash_debts_pending_plural')}`
-                : t('dash_all_good')}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setActiveModal('nuevoGasto')} className="text-xs bg-[#3D8B7A] text-[#0F1923] font-medium px-3 py-1.5 rounded-lg hover:opacity-90 transition">
-              {lang === 'es' ? '+ Nuevo gasto' : '+ New expense'}
-            </button>
-            <button onClick={() => setLang(lang === 'es' ? 'en' : 'es')} className="text-xs text-[#4A6A7A] hover:text-[#8A9BAA] transition border border-[#1E2D3D] px-2.5 py-1.5 rounded-lg">
-              {lang === 'es' ? 'EN' : 'ES'}
-            </button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-3 gap-3 mb-6">
-          <button onClick={() => setActiveModal('debo')} className="bg-[#172130] border border-[#1E2D3D] rounded-xl p-4 text-left hover:border-[#C0675A] transition">
-            <p className="text-xs text-[#4A6A7A] mb-1">{t('dash_owe')}</p>
-            <p className="text-2xl font-medium text-[#C0675A]">{formatMonto(totalDebo)}</p>
-            <p className="text-xs text-[#4A6A7A] mt-1">{deudasQueDebo.length} {deudasQueDebo.length === 1 ? t('dash_debts') : t('dash_debts_plural')}</p>
-          </button>
-          <button onClick={() => setActiveModal('meDeban')} className="bg-[#172130] border border-[#1E2D3D] rounded-xl p-4 text-left hover:border-[#3D8B7A] transition">
-            <p className="text-xs text-[#4A6A7A] mb-1">{t('dash_owed')}</p>
-            <p className="text-2xl font-medium text-[#3D8B7A]">{formatMonto(totalMeDeben)}</p>
-            <p className="text-xs text-[#4A6A7A] mt-1">{deudasQueMeDeben.length} {deudasQueMeDeben.length === 1 ? t('dash_people') : t('dash_people_plural')}</p>
-          </button>
-          <div className="bg-[#172130] border border-[#1E2D3D] rounded-xl p-4">
-            <p className="text-xs text-[#4A6A7A] mb-1">{t('dash_balance')}</p>
-            <p className={`text-2xl font-medium ${balanceNeto >= 0 ? 'text-[#3D8B7A]' : 'text-[#C0675A]'}`}>
-              {balanceNeto >= 0 ? '+' : ''}{formatMonto(balanceNeto)}
-            </p>
-            <p className="text-xs text-[#4A6A7A] mt-1">{t('dash_general')}</p>
-          </div>
-        </div>
-
-        <h2 className="text-sm font-medium text-[#E8E0D5] mb-3">{t('dash_movements')}</h2>
-        <div className="flex flex-col gap-2">
-          {gastos.length === 0 && <p className="text-sm text-[#4A6A7A]">{t('dash_no_movements')}</p>}
-          {gastos.map(gasto => {
-            const yoPague = gasto.pagado_por === userId
-            return (
-              <div key={gasto.id} className="bg-[#172130] border border-[#1E2D3D] rounded-xl px-4 py-3 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-[#1E2D3D] flex items-center justify-center text-lg flex-shrink-0">💳</div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-[#E8E0D5] truncate">
-                    {gasto.descripcion}
-                    {gasto.grupos && <span className="text-[#4A6A7A]"> · {gasto.grupos.nombre}</span>}
-                  </p>
-                  <p className="text-xs text-[#4A6A7A]">
-                    {yoPague ? t('dash_you_paid') : `${t('dash_paid')} ${gasto.pagador?.nombre}`} · {formatFecha(gasto.fecha)}
-                  </p>
-                </div>
-                <span className={`text-sm font-medium ${yoPague ? 'text-[#3D8B7A]' : 'text-[#C0675A]'}`}>
-                  {yoPague ? '+' : '-'}{formatMonto(gasto.monto)}
-                </span>
-              </div>
-            )
-          })}
-        </div>
-      </main>
-
-      {activeModal === 'debo' && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/60" onClick={() => setActiveModal(null)}>
-          <div className="bg-[#172130] border border-[#1E2D3D] rounded-2xl p-6 w-full max-w-sm mx-4" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-medium text-[#E8E0D5]">{t('modal_owe_title')}</h3>
-              <button onClick={() => setActiveModal(null)} className="text-[#4A6A7A] hover:text-[#8A9BAA]">✕</button>
-            </div>
-            {deudasQueDebo.length === 0 && <p className="text-sm text-[#4A6A7A]">{t('modal_no_debts')}</p>}
-            <div className="flex flex-col gap-3">
-              {deudasQueDebo.map(deuda => (
-                <div key={deuda.id} className="flex items-center justify-between py-2 border-b border-[#1E2D3D]">
-                  <div>
-                    <p className="text-sm font-medium text-[#E8E0D5]">{deuda.acreedor?.nombre}</p>
-                    <p className="text-xs text-[#4A6A7A]">{deuda.gastos?.descripcion}{deuda.gastos?.grupos && ` · ${deuda.gastos.grupos.nombre}`}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-[#C0675A]">{formatMonto(deuda.monto)}</span>
-                    <button onClick={() => saldarDeuda(deuda.id)} className="text-xs border border-[#1E2D3D] text-[#4A6A7A] hover:text-[#3D8B7A] hover:border-[#3D8B7A] px-2 py-0.5 rounded-lg transition">
-                      {lang === 'es' ? 'Saldar' : 'Settle'}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-            {deudasQueDebo.length > 0 && <p className="text-xs text-right mt-4 text-[#4A6A7A]">{t('modal_total')}: {formatMonto(totalDebo)}</p>}
-          </div>
-        </div>
-      )}
-
-      {activeModal === 'meDeban' && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/60" onClick={() => setActiveModal(null)}>
-          <div className="bg-[#172130] border border-[#1E2D3D] rounded-2xl p-6 w-full max-w-sm mx-4" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-medium text-[#E8E0D5]">{t('modal_owed_title')}</h3>
-              <button onClick={() => setActiveModal(null)} className="text-[#4A6A7A] hover:text-[#8A9BAA]">✕</button>
-            </div>
-            {deudasQueMeDeben.length === 0 && <p className="text-sm text-[#4A6A7A]">{t('modal_nobody_owes')}</p>}
-            <div className="flex flex-col gap-3">
-              {deudasQueMeDeben.map(deuda => (
-                <div key={deuda.id} className="flex items-center justify-between py-2 border-b border-[#1E2D3D]">
-                  <div>
-                    <p className="text-sm font-medium text-[#E8E0D5]">{deuda.deudor?.nombre}</p>
-                    <p className="text-xs text-[#4A6A7A]">{deuda.gastos?.descripcion}{deuda.gastos?.grupos && ` · ${deuda.gastos.grupos.nombre}`}</p>
-                  </div>
-                  <span className="text-sm font-medium text-[#3D8B7A]">{formatMonto(deuda.monto)}</span>
-                </div>
-              ))}
-            </div>
-            {deudasQueMeDeben.length > 0 && <p className="text-xs text-right mt-4 text-[#4A6A7A]">{t('modal_total')}: {formatMonto(totalMeDeben)}</p>}
-          </div>
-        </div>
-      )}
-
-      {activeModal === 'nuevoGrupo' && userId && (
-        <ModalNuevoGrupo onClose={() => setActiveModal(null)} onCreated={onGrupoCreado} amigos={amigos} userId={userId} isDemo={isDemo} />
-      )}
-      {activeModal === 'nuevoGasto' && userId && (
-        <ModalNuevoGasto onClose={() => setActiveModal(null)} onCreated={recargar} grupos={grupos} amigos={amigos} userId={userId} isDemo={isDemo} />
-      )}
-      {activeModal === 'agregarAmigo' && userId && (
-        <ModalAgregarAmigo onClose={() => setActiveModal(null)} onAdded={onAmigoAgregado} userId={userId} isDemo={isDemo} />
-      )}
-
-    </div>
+    <DashboardLayout
+      isDemo={isDemo}
+      user={user}
+      userId={userId}
+      grupos={grupos}
+      amigos={amigos}
+      onRefreshData={recargar}
+      onAmigoAdded={onAmigoAgregado}
+      onGrupoCreated={onGrupoCreado}
+      deudas={deudas}
+      onSaldarDeuda={saldarDeuda}
+      totalDebo={totalDebo}
+      totalMeDeben={totalMeDeben}
+    >
+        <DashboardContent 
+            user={user}
+            userId={userId}
+            isDemo={isDemo}
+            handleLogout={handleLogout}
+            deudasQueDebo={deudasQueDebo}
+            deudasQueMeDeben={deudasQueMeDeben}
+            totalDebo={totalDebo}
+            totalMeDeben={totalMeDeben}
+            balanceNeto={balanceNeto}
+            gastos={gastos}
+            formatMonto={formatMonto}
+            formatFecha={formatFecha}
+            saldarDeuda={saldarDeuda}
+        />
+    </DashboardLayout>
   )
 }
