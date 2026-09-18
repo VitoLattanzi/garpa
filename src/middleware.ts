@@ -36,7 +36,8 @@ export async function middleware(request: NextRequest) {
   const isPublicRoute =
     request.nextUrl.pathname === '/' ||
     request.nextUrl.pathname.startsWith('/login') ||
-    request.nextUrl.pathname.startsWith('/register')
+    request.nextUrl.pathname.startsWith('/register') ||
+    request.nextUrl.pathname.startsWith('/auth/update-password')
 
   // Verificamos si hay una sesión demo activa
   const isDemo = request.cookies.get('garpa-demo')?.value === 'true'
