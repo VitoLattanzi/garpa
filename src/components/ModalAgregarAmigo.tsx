@@ -28,11 +28,10 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
   const [estado, setEstado] = useState<Estado>('idle')
   const [error, setError] = useState<string | null>(null)
   const [usuarioEncontrado, setUsuarioEncontrado] = useState<{ id: string; nombre: string; email: string } | null>(null)
+  const [showReenviar, setShowReenviar] = useState(false)
 
   /**
    * Paso 1 — Busca el usuario por email
-   * Si existe lo muestra para confirmar
-   * Si no existe ofrece enviar una invitación
    */
   async function handleBuscar() {
     if (!email.trim()) {
@@ -42,9 +41,9 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
 
     setLoading(true)
     setError(null)
+    setShowReenviar(false) // Reset
 
     if (isDemo) {
-      // Demo — simulamos que no existe y generamos un amigo ficticio
       const nombres = ['Lucas Pérez', 'Sofía García', 'Martín López', 'Valentina Ruiz']
       const nombreRandom = nombres[Math.floor(Math.random() * nombres.length)]
       onAdded({
@@ -77,7 +76,7 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
         .maybeSingle()
 
       if (amistad) {
-        setError(lang === 'es' ? 'Ya son amigos o hay una solicitud pendiente' : 'Already friends or request pending')
+        setError(lang === 'es' ? 'Ya son amigos' : 'Already friends')
         setLoading(false)
         return
       }
@@ -86,7 +85,6 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
       setUsuarioEncontrado(usuario)
       setEstado('encontrado')
     } else {
-      // No existe — ofrecemos enviar invitación
       setEstado('error')
     }
 
@@ -94,27 +92,56 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
   }
 
   /**
-   * Paso 2a — Confirma la amistad con un usuario existente
+   * Paso 2a — Envía solicitud de amistad (inserta en invitaciones)
    */
   async function handleAgregarExistente() {
     if (!usuarioEncontrado) return
     setLoading(true)
+    setError(null)
 
-    const { error: amistarError } = await supabase
-      .from('amistades')
+    const { error: inviteError } = await supabase
+      .from('invitaciones')
       .insert({
-        usuario_id: userId,
-        amigo_id: usuarioEncontrado.id,
-        estado: 'activo',
+        solicitante_id: userId,
+        invitado_id: usuarioEncontrado.id,
+        estado: 'pendiente',
       })
 
-    if (amistarError) {
-      setError(lang === 'es' ? 'Error al agregar amigo' : 'Error adding friend')
+    if (inviteError) {
+      // 23505 = unique_violation
+      if (inviteError.code === '23505') {
+        setError(lang === 'es' ? 'Ya existe una solicitud pendiente' : 'A request is already pending')
+        setShowReenviar(true)
+      } else {
+        setError(lang === 'es' ? 'Error al enviar solicitud' : 'Error sending request')
+      }
       setLoading(false)
       return
     }
 
-    onAdded(usuarioEncontrado)
+    setEstado('invitado')
+    setLoading(false)
+  }
+
+  /**
+   * Reenviar solicitud — actualiza el timestamp
+   */
+  async function handleReenviar() {
+      if (!usuarioEncontrado) return
+      setLoading(true)
+      
+      const { error: updateError } = await supabase
+        .from('invitaciones')
+        .update({ estado: 'pendiente' })
+        .eq('solicitante_id', userId)
+        .eq('invitado_id', usuarioEncontrado.id)
+
+      if (updateError) {
+          setError(lang === 'es' ? 'Error al reenviar' : 'Error resending')
+      } else {
+          setEstado('invitado')
+      }
+      setLoading(false)
   }
 
   /**
@@ -232,16 +259,29 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
               </div>
             </div>
             {error && <p className="text-xs text-[#C0675A] mb-3">{error}</p>}
-            <button
-              onClick={handleAgregarExistente}
-              disabled={loading}
-              className="w-full bg-[#3D8B7A] text-[#0F1923] font-medium py-2.5 rounded-lg text-sm hover:opacity-90 transition disabled:opacity-50"
-            >
-              {loading
-                ? (lang === 'es' ? 'Agregando...' : 'Adding...')
-                : (lang === 'es' ? 'Agregar como amigo' : 'Add as friend')
-              }
-            </button>
+            {showReenviar ? (
+              <button
+                onClick={handleReenviar}
+                disabled={loading}
+                className="w-full bg-[#1E2D3D] text-[#E8E0D5] font-medium py-2.5 rounded-lg text-sm hover:opacity-90 transition disabled:opacity-50"
+              >
+                  {loading 
+                    ? (lang === 'es' ? 'Reenviando...' : 'Resending...')
+                    : (lang === 'es' ? 'Reenviar solicitud' : 'Resend request')
+                  }
+              </button>
+            ) : (
+              <button
+                onClick={handleAgregarExistente}
+                disabled={loading}
+                className="w-full bg-[#3D8B7A] text-[#0F1923] font-medium py-2.5 rounded-lg text-sm hover:opacity-90 transition disabled:opacity-50"
+              >
+                {loading
+                  ? (lang === 'es' ? 'Agregando...' : 'Adding...')
+                  : (lang === 'es' ? 'Agregar como amigo' : 'Add as friend')
+                }
+              </button>
+            )}
           </div>
         )}
 

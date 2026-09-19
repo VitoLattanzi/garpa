@@ -6,7 +6,7 @@ type SidebarProps = {
   user: any
   grupos: any[]
   onOpenModal: (modalName: string) => void
-}
+} 
 
 export default function Sidebar({ isDemo, user, grupos, onOpenModal }: SidebarProps) {
   const { t, lang } = useLang()
