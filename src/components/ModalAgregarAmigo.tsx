@@ -29,6 +29,7 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
   const [error, setError] = useState<string | null>(null)
   const [usuarioEncontrado, setUsuarioEncontrado] = useState<{ id: string; nombre: string; email: string } | null>(null)
   const [showReenviar, setShowReenviar] = useState(false)
+  const [invitacionPrevia, setInvitacionPrevia] = useState<any>(null)
 
   /**
    * Paso 1 — Busca el usuario por email
@@ -98,7 +99,26 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
     if (!usuarioEncontrado) return
     setLoading(true)
     setError(null)
+    setInvitacionPrevia(null)
+    setShowReenviar(false)
 
+    // 1. Verificamos si existe invitación previa
+    const { data: invExistente } = await supabase
+      .from('invitaciones')
+      .select('*')
+      .eq('solicitante_id', userId)
+      .eq('invitado_id', usuarioEncontrado.id)
+      .maybeSingle()
+
+    if (invExistente) {
+      setInvitacionPrevia(invExistente)
+      setError(lang === 'es' ? 'Ya existe una interacción previa con este usuario.' : 'There is already a previous interaction with this user.')
+      setShowReenviar(true)
+      setLoading(false)
+      return
+    }
+
+    // 2. Insertamos
     const { error: inviteError } = await supabase
       .from('invitaciones')
       .insert({
@@ -108,13 +128,7 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
       })
 
     if (inviteError) {
-      // 23505 = unique_violation
-      if (inviteError.code === '23505') {
-        setError(lang === 'es' ? 'Ya existe una interacción previa con este usuario.' : 'There is already a previous interaction with this user.')
-        setShowReenviar(true)
-      } else {
-        setError(lang === 'es' ? 'Error al enviar solicitud' : 'Error sending request')
-      }
+      setError(lang === 'es' ? 'Error al enviar solicitud' : 'Error sending request')
       setLoading(false)
       return
     }
@@ -127,14 +141,13 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
    * Reenviar solicitud — actualiza el timestamp
    */
   async function handleReenviar() {
-      if (!usuarioEncontrado) return
+      if (!usuarioEncontrado || !invitacionPrevia) return
       setLoading(true)
       
       const { error: updateError } = await supabase
         .from('invitaciones')
         .update({ estado: 'pendiente' })
-        .eq('solicitante_id', userId)
-        .eq('invitado_id', usuarioEncontrado.id)
+        .eq('id', invitacionPrevia.id)
 
       if (updateError) {
           setError(lang === 'es' ? 'Error al reenviar' : 'Error resending')
