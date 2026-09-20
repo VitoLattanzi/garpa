@@ -110,7 +110,7 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
     if (inviteError) {
       // 23505 = unique_violation
       if (inviteError.code === '23505') {
-        setError(lang === 'es' ? 'Ya existe una solicitud pendiente' : 'A request is already pending')
+        setError(lang === 'es' ? 'Ya existe una interacción previa con este usuario.' : 'There is already a previous interaction with this user.')
         setShowReenviar(true)
       } else {
         setError(lang === 'es' ? 'Error al enviar solicitud' : 'Error sending request')

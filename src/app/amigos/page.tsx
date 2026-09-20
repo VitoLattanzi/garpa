@@ -7,7 +7,7 @@ import { Amigo, Deuda, Grupo } from '@/types/garpa'
 import DashboardLayout, { useDashboard } from '@/components/DashboardLayout'
 
 function AmigosContent({ 
-  isDemo, user, myUserId, grupos, amigos, invitacionesRecibidas, handleAccept, handleDelete, lang 
+  isDemo, user, myUserId, grupos, amigos, invitacionesRecibidas, handleAccept, handleReject, handleDelete, lang 
 }: any) {
   const { openModal } = useDashboard()
 
@@ -44,12 +44,20 @@ function AmigosContent({
             {invitacionesRecibidas.map((inv: any) => (
                 <div key={inv.id} className="flex justify-between items-center bg-[#172130] p-3 rounded-lg border border-[#1E2D3D]">
                   <span className="text-sm text-[#E8E0D5]">{inv.solicitante.nombre}</span>
-                  <button 
-                    onClick={() => handleAccept(inv.id, inv.solicitante.id)}
-                    className="text-xs bg-[#3D8B7A] text-[#0F1923] px-3 py-1 rounded-full font-medium"
-                  >
-                    {lang === 'es' ? 'Aceptar' : 'Accept'}
-                  </button>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => handleAccept(inv.id, inv.solicitante.id)}
+                      className="text-xs bg-[#3D8B7A] text-[#0F1923] px-3 py-1 rounded-full font-medium"
+                    >
+                      {lang === 'es' ? 'Aceptar' : 'Accept'}
+                    </button>
+                    <button 
+                      onClick={() => handleReject(inv.id)}
+                      className="text-xs text-[#C0675A] border border-[#C0675A]/20 hover:bg-[#C0675A]/10 px-3 py-1 rounded-full font-medium"
+                    >
+                      {lang === 'es' ? 'Rechazar' : 'Reject'}
+                    </button>
+                  </div>
                 </div>
             ))}
           </div>
@@ -205,8 +213,7 @@ export default function AmigosPage() {
   }, [supabase])
 
   async function handleAccept(invitacionId: string, solicitanteId: string) {
-    // 1. Crear amistad bidireccional (o unidireccional según convención del proyecto)
-    // Asumiremos que es un registro por amistad
+    // 1. Crear amistad bidireccional
     await supabase.from('amistades').insert([
         { usuario_id: myUserId, amigo_id: solicitanteId, estado: 'activo' },
         { usuario_id: solicitanteId, amigo_id: myUserId, estado: 'activo' }
@@ -215,8 +222,18 @@ export default function AmigosPage() {
     // 2. Actualizar estado invitacion
     await supabase.from('invitaciones').update({ estado: 'aceptada' }).eq('id', invitacionId)
 
-    // Recargar
-    window.location.reload()
+    // 3. Actualizar estado local
+    setInvitacionesRecibidas(prev => prev.filter(i => i.id !== invitacionId))
+    // Nota: Opcionalmente deberíamos recargar la lista de amigos aquí si quisiéramos verlos reflejados inmediatamente,
+    // pero por ahora el requisito es solo limpiar la invitación
+  }
+
+  async function handleReject(invitacionId: string) {
+    // Actualizar estado invitacion a rechazada
+    await supabase.from('invitaciones').update({ estado: 'rechazada' }).eq('id', invitacionId)
+    
+    // Actualizar estado local
+    setInvitacionesRecibidas(prev => prev.filter(i => i.id !== invitacionId))
   }
 
   async function handleDelete(amigoId: string, balance: number, friendEmail: string) {
@@ -268,6 +285,7 @@ export default function AmigosPage() {
         amigos={amigos}
         invitacionesRecibidas={invitacionesRecibidas}
         handleAccept={handleAccept}
+        handleReject={handleReject}
         handleDelete={handleDelete}
         lang={lang}
       />
