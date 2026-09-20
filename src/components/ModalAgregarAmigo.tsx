@@ -102,13 +102,18 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
     setInvitacionPrevia(null)
     setShowReenviar(false)
 
-    // 1. Verificamos si existe invitación previa
-    const { data: invExistente } = await supabase
+    // 1. Verificamos si existe invitación previa en ambas direcciones
+    const { data: invExistente, error: selectError } = await supabase
       .from('invitaciones')
       .select('*')
-      .eq('solicitante_id', userId)
-      .eq('invitado_id', usuarioEncontrado.id)
+      .or(`and(solicitante_id.eq.${userId},invitado_id.eq.${usuarioEncontrado.id}),and(solicitante_id.eq.${usuarioEncontrado.id},invitado_id.eq.${userId})`)
       .maybeSingle()
+
+    if (selectError) {
+      setError(lang === 'es' ? 'Error al verificar el estado' : 'Error checking status')
+      setLoading(false)
+      return
+    }
 
     if (invExistente) {
       setInvitacionPrevia(invExistente)
