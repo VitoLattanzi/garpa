@@ -182,14 +182,20 @@ export default function AmigosPage() {
         .eq('estado', 'activo')
 
       // 2. Fetch invitaciones recibidas
-      const { data: rawInvitaciones } = await supabase
+      const { data: rawInvitaciones, error: invitacionesError } = await supabase
         .from('invitaciones')
         .select(`
           id,
-          solicitante:usuarios!invitaciones_solicitante_id_fkey(nombre, email)
+          solicitante:usuarios!solicitante_id(id, nombre, email)
         `)
         .eq('invitado_id', uid)
         .eq('estado', 'pendiente')
+
+      if (invitacionesError) {
+        console.error('Error fetching invitaciones:', invitacionesError)
+      } else if (rawInvitaciones) {
+        setInvitacionesRecibidas(rawInvitaciones)
+      }
 
       // 3. Fetch deudas
       const { data: deudas } = await supabase
@@ -213,8 +219,6 @@ export default function AmigosPage() {
         amigosConBalance.sort((a, b) => b.balance - a.balance)
         setAmigos(amigosConBalance)
       }
-      
-      if (rawInvitaciones) setInvitacionesRecibidas(rawInvitaciones)
       
       setLoading(false)
     }
