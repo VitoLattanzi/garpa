@@ -37,23 +37,26 @@ function AmigosContent({
       </div>
 
       {/* Solicitudes de amistad */}
-      {invitacionesRecibidas.length > 0 && (
+      {invitacionesRecibidas.length > 0 ? (
         <div className="mb-6">
           <h2 className="text-sm font-bold text-[#E8E0D5] mb-3">{lang === 'es' ? 'Solicitudes pendientes' : 'Pending requests'}</h2>
           <div className="flex flex-col gap-2">
             {invitacionesRecibidas.map((inv: any) => (
-                <div key={inv.id} className="flex justify-between items-center bg-[#172130] p-3 rounded-lg border border-[#1E2D3D]">
-                  <span className="text-sm text-[#E8E0D5]">{inv.solicitante.nombre}</span>
+                <div key={inv.id} className="flex justify-between items-center bg-[#172130] p-4 rounded-xl border border-[#1E2D3D]">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-[#E8E0D5]">{inv.solicitante.nombre}</span>
+                    <span className="text-xs text-[#4A6A7A]">{inv.solicitante.email}</span>
+                  </div>
                   <div className="flex gap-2">
                     <button 
                       onClick={() => handleAccept(inv.id, inv.solicitante.id)}
-                      className="text-xs bg-[#3D8B7A] text-[#0F1923] px-3 py-1 rounded-full font-medium"
+                      className="text-xs bg-[#3D8B7A] text-[#0F1923] px-3 py-1.5 rounded-lg font-medium hover:opacity-90 transition"
                     >
                       {lang === 'es' ? 'Aceptar' : 'Accept'}
                     </button>
                     <button 
                       onClick={() => handleReject(inv.id)}
-                      className="text-xs text-[#C0675A] border border-[#C0675A]/20 hover:bg-[#C0675A]/10 px-3 py-1 rounded-full font-medium"
+                      className="text-xs text-[#C0675A] bg-[#1E2D3D] border border-[#1E2D3D] hover:border-[#C0675A]/50 px-3 py-1.5 rounded-lg font-medium transition"
                     >
                       {lang === 'es' ? 'Rechazar' : 'Reject'}
                     </button>
@@ -61,6 +64,12 @@ function AmigosContent({
                 </div>
             ))}
           </div>
+        </div>
+      ) : (
+        <div className="mb-6 text-center py-4 border border-dashed border-[#1E2D3D] rounded-xl">
+           <p className="text-xs text-[#4A6A7A]">
+             {lang === 'es' ? 'No hay solicitudes de amistad nuevas.' : 'No new friend requests.'}
+           </p>
         </div>
       )}
       
