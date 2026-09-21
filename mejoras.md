@@ -3,8 +3,9 @@
 Este archivo documenta los hallazgos de auditoría del código, clasificados por criticidad y tipo, para guiar el desarrollo continuo del proyecto.
 
 ## 1. Bugs Críticos
-- [ ] **Falta `auth-errors.ts`:** Crear el archivo `src/lib/auth-errors.ts` para centralizar el manejo de errores de autenticación (actualmente inexistente, rompiendo la lógica de login/registro).
-- [ ] **Ausencia de Error Handling en Fetches:** Implementar bloques `try/catch` en todos los componentes que realizan llamadas a Supabase (`dashboard`, `gastos`, `grupos`) para evitar estados de carga infinitos en caso de error.
+- [x] **Falta `auth-errors.ts`:** Crear el archivo `src/lib/auth-errors.ts` para centralizar el manejo de errores de autenticación.
+- [ ] **Ausencia de Error Handling en Fetches:** Implementar `safeQuery` en todos los componentes que realizan llamadas a Supabase (`dashboard`, `grupos`, `gastos`).
+- [ ] **Granularidad de Errores en Interacciones:** Mejorar el reporte de errores en interacciones (amistades, grupos, invitaciones) para especificar la causa raíz (ej. "usuario no encontrado", "error de red", "sin permisos").
 
 ## 2. Deuda Técnica
 - [ ] **Refactor de Estilos (Colores):**

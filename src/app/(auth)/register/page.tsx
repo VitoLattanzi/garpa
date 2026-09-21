@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useLang } from '@/context/LangContext'
+import { getAuthErrorMessage } from '@/lib/auth-errors'
 
 /**
  * Página de registro
@@ -51,7 +52,7 @@ export default function RegisterPage() {
     })
 
     if (authError) {
-      setError(authError.message)
+      setError(getAuthErrorMessage(authError))
       setLoading(false)
       return
     }
@@ -127,7 +128,7 @@ export default function RegisterPage() {
         </div>
 
         {error && (
-          <p className="text-red-500 text-sm">{error}</p>
+          <p className="text-red-500 text-sm">{t(error as any)}</p>
         )}
 
         <button

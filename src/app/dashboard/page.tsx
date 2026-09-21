@@ -5,13 +5,14 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { CreditCard } from 'lucide-react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { safeQuery } from '@/lib/supabase-utils'
 import { useLang } from '@/context/LangContext'
 import { Grupo, Deuda, Gasto, Amigo } from '@/types/garpa'
 import DashboardLayout, { useDashboard } from '@/components/DashboardLayout'
 
 
 function DashboardContent({ 
-  user, userId, isDemo, handleLogout, deudasQueDebo, deudasQueMeDeben, totalDebo, totalMeDeben, balanceNeto, gastos, formatMonto, formatFecha, 
+  user, userId, isDemo, handleLogout, deudasQueDebo, deudasQueMeDeben, totalDebo, totalMeDeben, balanceNeto, gastos, formatMonto, formatFecha, saldarDeuda,
 }: any) {
   const { t, lang } = useLang()
   const { openModal } = useDashboard()
@@ -162,51 +163,63 @@ export default function DashboardPage() {
       setUserId(uid)
 
       // Perfil
-      const { data: perfil } = await supabase
-        .from('usuarios').select('nombre, email').eq('id', uid).single()
+      const { data: perfil } = await safeQuery<{nombre: string, email: string}>(
+        supabase.from('usuarios').select('nombre, email').eq('id', uid).single()
+      )
       if (perfil) setUser(perfil)
 
       // Amigos
-      const { data: amistadesData } = await supabase
-        .from('amistades')
-        .select('id, usuario_id, amigo_id, estado, perfil:usuarios!amistades_amigo_id_fkey(nombre, email)')
-        .eq('usuario_id', uid).eq('estado', 'activo')
-      if (amistadesData) setAmigos(amistadesData as any)
+      const { data: amistadesData } = await safeQuery<Amigo[]>(
+        supabase
+          .from('amistades')
+          .select('id, usuario_id, amigo_id, estado, perfil:usuarios!amistades_amigo_id_fkey(nombre, email)')
+          .eq('usuario_id', uid).eq('estado', 'activo')
+      )
+      if (amistadesData) setAmigos(amistadesData)
 
       // Grupos — query simplificada sin joins
-      const { data: miembrosData } = await supabase
-        .from('miembros_grupo').select('grupo_id').eq('usuario_id', uid)
+      const { data: miembrosData } = await safeQuery<any[]>(
+        supabase
+          .from('miembros_grupo').select('grupo_id').eq('usuario_id', uid)
+      )
       if (miembrosData && miembrosData.length > 0) {
         const grupoIds = miembrosData.map((m: any) => m.grupo_id)
-        const { data: gruposData } = await supabase
-          .from('grupos').select('id, nombre').in('id', grupoIds)
+        const { data: gruposData } = await safeQuery<Grupo[]>(
+          supabase
+            .from('grupos').select('id, nombre').in('id', grupoIds)
+        )
         if (gruposData) setGrupos(gruposData)
       }
 
       // Deudas — queries separadas en lugar de joins anidados
-      const { data: deudasData } = await supabase
-        .from('deudas')
-        .select('id, monto, saldado, acreedor_id, deudor_id, gasto_id, grupo_id')
-        .or(`deudor_id.eq.${uid},acreedor_id.eq.${uid}`)
-        .eq('saldado', false)
+      const { data: deudasData } = await safeQuery<any[]>(
+        supabase
+          .from('deudas')
+          .select('id, monto, saldado, acreedor_id, deudor_id, gasto_id, grupo_id')
+          .or(`deudor_id.eq.${uid},acreedor_id.eq.${uid}`)
+          .eq('saldado', false)
+      )
 
       if (deudasData && deudasData.length > 0) {
         const userIds = [...new Set([
           ...deudasData.map((d: any) => d.acreedor_id),
           ...deudasData.map((d: any) => d.deudor_id),
         ])]
-        const { data: usuariosData } = await supabase
-          .from('usuarios').select('id, nombre').in('id', userIds)
+        const { data: usuariosData } = await safeQuery<any[]>(
+          supabase
+            .from('usuarios').select('id, nombre').in('id', userIds)
+        )
 
         const gastoIds = deudasData.map((d: any) => d.gasto_id).filter(Boolean)
         const { data: gastosRef } = gastoIds.length > 0
-          ? await supabase.from('gastos').select('id, descripcion, grupo_id').in('id', gastoIds)
+          ? await safeQuery<any[]>(supabase.from('gastos').select('id, descripcion, grupo_id').in('id', gastoIds))
           : { data: [] }
 
         const grupoIdsDeudas = (gastosRef ?? []).map((g: any) => g.grupo_id).filter(Boolean)
         const { data: gruposRef } = grupoIdsDeudas.length > 0
-          ? await supabase.from('grupos').select('id, nombre').in('id', grupoIdsDeudas)
+          ? await safeQuery<any[]>(supabase.from('grupos').select('id, nombre').in('id', grupoIdsDeudas))
           : { data: [] }
+
 
         const deudasEnsambladas = deudasData.map((d: any) => ({
           ...d,
@@ -225,26 +238,33 @@ export default function DashboardPage() {
       }
 
       // Gastos recientes — queries separadas
-      const { data: partData } = await supabase
-        .from('participantes_gasto').select('gasto_id').eq('usuario_id', uid).limit(5)
+      const { data: partData } = await safeQuery<any[]>(
+        supabase
+          .from('participantes_gasto').select('gasto_id').eq('usuario_id', uid).limit(5)
+      )
 
       if (partData && partData.length > 0) {
         const gastoIds = partData.map((p: any) => p.gasto_id)
-        const { data: gastosData } = await supabase
-          .from('gastos')
-          .select('id, descripcion, monto, fecha, pagado_por, grupo_id')
-          .in('id', gastoIds)
-          .order('fecha', { ascending: false })
+        const { data: gastosData } = await safeQuery<any[]>(
+          supabase
+            .from('gastos')
+            .select('id, descripcion, monto, fecha, pagado_por, grupo_id')
+            .in('id', gastoIds)
+            .order('fecha', { ascending: false })
+        )
 
         if (gastosData) {
           const pagadorIds = [...new Set(gastosData.map((g: any) => g.pagado_por))]
-          const { data: pagadoresData } = await supabase
-            .from('usuarios').select('id, nombre').in('id', pagadorIds)
+          const { data: pagadoresData } = await safeQuery<any[]>(
+            supabase
+              .from('usuarios').select('id, nombre').in('id', pagadorIds)
+          )
 
           const grupoIdsGastos = gastosData.map((g: any) => g.grupo_id).filter(Boolean)
           const { data: gruposGastos } = grupoIdsGastos.length > 0
-            ? await supabase.from('grupos').select('id, nombre').in('id', grupoIdsGastos)
+            ? await safeQuery<any[]>(supabase.from('grupos').select('id, nombre').in('id', grupoIdsGastos))
             : { data: [] }
+
 
           const gastosEnsamblados = gastosData.map((g: any) => ({
             ...g,
@@ -309,7 +329,7 @@ export default function DashboardPage() {
         const pagadorIds = [...new Set(gastosData.map((g: any) => g.pagado_por))]
         const { data: pagadoresData } = await supabase.from('usuarios').select('id, nombre').in('id', pagadorIds)
         const grupoIdsGastos = gastosData.map((g: any) => g.grupo_id).filter(Boolean)
-        const { data: gruposGastos } = grupoIdsGastos.length > 0 ? await supabase.from('gastos').select('id, nombre').in('id', grupoIdsGastos) : { data: [] }
+        const { data: gruposGastos } = grupoIdsGastos.length > 0 ? await supabase.from('grupos').select('id, nombre').in('id', grupoIdsGastos) : { data: [] }
         setGastos(gastosData.map((g: any) => ({ ...g, pagador: { nombre: pagadoresData?.find((p: any) => p.id === g.pagado_por)?.nombre ?? '' }, grupos: gruposGastos?.find((gr: any) => gr.id === g.grupo_id) ?? null })) as any)
       }
     } else {

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useLang } from '@/context/LangContext'
+import { getAuthErrorMessage } from '@/lib/auth-errors'
 
 /**
  * Página de login
@@ -71,7 +72,7 @@ export default function LoginPage() {
     })
 
     if (authError) {
-      setError('login_error')
+      setError(getAuthErrorMessage(authError))
       setLoading(false)
       return
     }
@@ -135,7 +136,7 @@ export default function LoginPage() {
         </div>
 
         {error && (
-          <p className="text-red-500 text-sm">{error === 'login_error' ? t('login_error') : error}</p>
+          <p className="text-red-500 text-sm">{t(error as any)}</p>
         )}
 
         <button
