@@ -1,22 +1,31 @@
 @import "tailwindcss";
 
+@theme {
+  --color-background-base: #0F1923;
+  --color-background-card: #172130;
+  --color-background-border: #1E2D3D;
+
+  --color-text-text-primary: #E8E0D5;
+  --color-text-text-secondary: #8A9BAA;
+  --color-text-text-muted: #4A6A7A;
+
+  --color-positive: #3D8B7A;
+  --color-negative: #C0675A;
+  --color-accent: #2A6496;
+}
+
 :root {
-  /* Fondos */
+  /* Estas variables CSS siguen aquí por compatibilidad si es necesario, 
+     pero Tailwind 4 las consumirá via @theme */
   --bg-base: #0F1923;
   --bg-card: #172130;
   --bg-border: #1E2D3D;
 
-  /* Texto */
   --text-primary: #E8E0D5;
   --text-secondary: #8A9BAA;
   --text-muted: #4A6A7A;
 
-  /* Acento positivo — verde salvia */
   --color-positive: #3D8B7A;
-
-  /* Acento negativo — rojo ladrillo */
   --color-negative: #C0675A;
-
-  /* Acento neutro — azul acero */
   --color-accent: #2A6496;
 }
