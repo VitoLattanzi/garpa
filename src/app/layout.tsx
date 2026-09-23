@@ -31,7 +31,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body className={`${geist.variable} font-sans antialiased bg-background-base text-text-primary`}>
+      <body className={`${geist.variable} font-sans antialiased bg-base text-main`}>
         <LangProvider>
           {children}
         </LangProvider>

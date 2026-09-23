@@ -70,20 +70,20 @@ export default function ConfiguracionPage() {
       grupos={grupos}
       amigos={amigos}
     >
-      <div className="p-6 max-w-2xl mx-auto text-text-primary">
+      <div className="p-6 max-w-2xl mx-auto text-main">
         <h1 className="text-2xl font-semibold mb-8 text-positive">{lang === 'es' ? 'Configuración' : 'Settings'}</h1>
         
-        <div className="bg-background-card border border-background-border rounded-xl p-6 mb-8">
-          <h2 className="text-sm font-medium mb-4 text-text-secondary">{lang === 'es' ? 'Perfil' : 'Profile'}</h2>
+        <div className="bg-card border border-border rounded-xl p-6 mb-8">
+          <h2 className="text-sm font-medium mb-4 text-sec">{lang === 'es' ? 'Perfil' : 'Profile'}</h2>
           {user ? (
             <div className="space-y-4">
               <div>
-                <label className="block text-xs text-text-muted mb-1.5">{lang === 'es' ? 'Nombre' : 'Name'}</label>
+                <label className="block text-xs text-muted mb-1.5">{lang === 'es' ? 'Nombre' : 'Name'}</label>
                 <div className="flex gap-2">
                   <input 
                     value={nombre} 
                     onChange={e => setNombre(e.target.value)}
-                    className="flex-1 bg-background-base border border-background-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:border-positive"
+                    className="flex-1 bg-base border border-border rounded-lg px-3 py-2 text-sm text-main outline-none focus:border-positive"
                   />
                   <button 
                     onClick={updateProfile} 
@@ -95,17 +95,17 @@ export default function ConfiguracionPage() {
                 </div>
               </div>
               <div>
-                <p className="text-xs text-text-muted">Email</p>
+                <p className="text-xs text-muted">Email</p>
                 <p className="text-sm">{user.email}</p>
               </div>
             </div>
           ) : (
-            <p className="text-sm text-text-muted">{lang === 'es' ? 'Cargando perfil...' : 'Loading profile...'}</p>
+            <p className="text-sm text-muted">{lang === 'es' ? 'Cargando perfil...' : 'Loading profile...'}</p>
           )}
         </div>
 
-        <div className="bg-background-card border border-background-border rounded-xl p-6">
-          <h2 className="text-sm font-medium mb-4 text-text-secondary">{lang === 'es' ? 'Preferencias' : 'Preferences'}</h2>
+        <div className="bg-card border border-border rounded-xl p-6">
+          <h2 className="text-sm font-medium mb-4 text-sec">{lang === 'es' ? 'Preferencias' : 'Preferences'}</h2>
           <div className="flex justify-between items-center">
               <span className="text-sm">{lang === 'es' ? 'Idioma' : 'Language'}</span>
               <span className="text-xs text-positive bg-positive/10 px-2 py-1 rounded">{lang.toUpperCase()}</span>
@@ -115,3 +115,4 @@ export default function ConfiguracionPage() {
     </DashboardLayout>
   )
 }
+

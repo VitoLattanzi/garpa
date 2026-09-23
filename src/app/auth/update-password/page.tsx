@@ -41,7 +41,7 @@ export default function UpdatePasswordPage() {
 
   return (
     <div className="flex flex-col gap-6 max-w-sm mx-auto p-6">
-      <h1 className="text-2xl font-semibold text-text-primary">
+      <h1 className="text-2xl font-semibold text-main">
         {lang === 'es' ? 'Nueva contraseña' : 'New password'}
       </h1>
       <form onSubmit={handleUpdatePassword} className="flex flex-col gap-4">
@@ -51,7 +51,7 @@ export default function UpdatePasswordPage() {
           onChange={(e) => setPassword(e.target.value)}
           placeholder={lang === 'es' ? 'Nueva contraseña' : 'New password'}
           required
-          className="w-full bg-background-base border border-background-border rounded-lg px-4 py-2.5 text-sm text-text-primary"
+          className="w-full bg-base border border-border rounded-lg px-4 py-2.5 text-sm text-main"
         />
         <input
           type="password"
@@ -59,7 +59,7 @@ export default function UpdatePasswordPage() {
           onChange={(e) => setConfirmPassword(e.target.value)}
           placeholder={lang === 'es' ? 'Confirmar contraseña' : 'Confirm password'}
           required
-          className="w-full bg-background-base border border-background-border rounded-lg px-4 py-2.5 text-sm text-text-primary"
+          className="w-full bg-base border border-border rounded-lg px-4 py-2.5 text-sm text-main"
         />
         {error && <p className="text-negative text-sm">{error}</p>}
         <button
@@ -73,3 +73,4 @@ export default function UpdatePasswordPage() {
     </div>
   )
 }
+

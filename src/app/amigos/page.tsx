@@ -15,13 +15,13 @@ function AmigosContent({
 
   return (
     <div className="flex flex-col gap-6 max-w-2xl mx-auto p-6">
-      <a href="/dashboard" className="text-sm text-text-muted hover:text-text-secondary flex items-center gap-1">
+      <a href="/dashboard" className="text-sm text-muted hover:text-sec flex items-center gap-1">
         ← {lang === 'es' ? 'Volver al dashboard' : 'Back to dashboard'}
       </a>
       
       <div className="flex flex-col gap-1">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-text-primary">
+          <h1 className="text-2xl font-bold text-main">
             {lang === 'es' ? 'Tus amigos' : 'Your friends'}
           </h1>
           <button 
@@ -31,7 +31,7 @@ function AmigosContent({
             {lang === 'es' ? '+ Agregar amigo' : '+ Add friend'}
           </button>
         </div>
-        <p className="text-sm text-text-muted">
+        <p className="text-sm text-muted">
           {lang === 'es' 
             ? 'Gestioná tus contactos y verificá quién te debe o a quién le debés.' 
             : 'Manage your contacts and check who owes you or who you owe.'}
@@ -41,13 +41,13 @@ function AmigosContent({
       {/* Solicitudes de amistad */}
       {invitacionesRecibidas.length > 0 ? (
         <div className="mb-6">
-          <h2 className="text-sm font-bold text-text-primary mb-3">{lang === 'es' ? 'Solicitudes pendientes' : 'Pending requests'}</h2>
+          <h2 className="text-sm font-bold text-main mb-3">{lang === 'es' ? 'Solicitudes pendientes' : 'Pending requests'}</h2>
           <div className="flex flex-col gap-2">
             {invitacionesRecibidas.map((inv: any) => (
-                <div key={inv.id} className="flex justify-between items-center bg-background-card p-4 rounded-xl border border-background-border">
+                <div key={inv.id} className="flex justify-between items-center bg-card p-4 rounded-xl border border-border">
                   <div className="flex flex-col">
-                    <span className="text-sm font-medium text-text-primary">{inv.solicitante.nombre}</span>
-                    <span className="text-xs text-text-muted">{inv.solicitante.email}</span>
+                    <span className="text-sm font-medium text-main">{inv.solicitante.nombre}</span>
+                    <span className="text-xs text-muted">{inv.solicitante.email}</span>
                   </div>
                   <div className="flex gap-2">
                     <button 
@@ -58,7 +58,7 @@ function AmigosContent({
                     </button>
                     <button 
                       onClick={() => handleReject(inv.id)}
-                      className="text-xs text-negative bg-background-border border border-background-border hover:border-negative/50 px-3 py-1.5 rounded-lg font-medium transition"
+                      className="text-xs text-negative bg-background-border border border-border hover:border-negative/50 px-3 py-1.5 rounded-lg font-medium transition"
                     >
                       {lang === 'es' ? 'Rechazar' : 'Reject'}
                     </button>
@@ -68,36 +68,36 @@ function AmigosContent({
           </div>
         </div>
       ) : (
-        <div className="mb-6 text-center py-4 border border-dashed border-background-border rounded-xl">
-           <p className="text-xs text-text-muted">
+        <div className="mb-6 text-center py-4 border border-dashed border-border rounded-xl">
+           <p className="text-xs text-muted">
              {lang === 'es' ? 'No hay solicitudes de amistad nuevas.' : 'No new friend requests.'}
            </p>
         </div>
       )}
       
       {amigos.length === 0 ? (
-        <div className="bg-background-card border border-background-border rounded-2xl p-8 text-center">
-          <p className="text-text-secondary">
+        <div className="bg-card border border-border rounded-2xl p-8 text-center">
+          <p className="text-sec">
             {lang === 'es' ? 'Todavía no tenés amigos agregados.' : 'No friends added yet.'}
           </p>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
           {amigos.map((amigo: any) => (
-            <div key={amigo.id} className="group relative flex items-center justify-between p-4 bg-background-card border border-background-border rounded-xl hover:border-positive/50 transition-all">
+            <div key={amigo.id} className="group relative flex items-center justify-between p-4 bg-card border border-border rounded-xl hover:border-positive/50 transition-all">
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-full bg-background-border flex items-center justify-center text-positive font-bold">
                   {amigo.perfil.nombre.slice(0, 2).toUpperCase()}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-text-primary">{amigo.perfil.nombre}</p>
-                  <p className="text-xs text-text-muted">{amigo.perfil.email}</p>
+                  <p className="text-sm font-medium text-main">{amigo.perfil.nombre}</p>
+                  <p className="text-xs text-muted">{amigo.perfil.email}</p>
                 </div>
               </div>
               
               <div className="flex items-center gap-6">
                 <div className="text-right">
-                  <p className="text-xs text-text-muted mb-0.5">
+                  <p className="text-xs text-muted mb-0.5">
                     {amigo.balance > 0 
                       ? (lang === 'es' ? 'Te debe' : 'Owes you')
                       : amigo.balance < 0 
@@ -106,7 +106,7 @@ function AmigosContent({
                   </p>
                   <span className={`text-sm font-bold ${
                     amigo.balance > 0 ? 'text-green-500' : 
-                    amigo.balance < 0 ? 'text-red-500' : 'text-text-secondary'
+                    amigo.balance < 0 ? 'text-red-500' : 'text-sec'
                   }`}>
                     {amigo.balance !== 0 ? Math.abs(amigo.balance).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' }) : '-'}
                   </span>
@@ -314,4 +314,5 @@ export default function AmigosPage() {
     </DashboardLayout>
   )
 }
+
 

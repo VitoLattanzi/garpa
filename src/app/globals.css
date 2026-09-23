@@ -1,18 +1,19 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background-base: #0F1923;
-  --color-background-card: #172130;
-  --color-background-border: #1E2D3D;
+  --color-base: #0F1923;
+  --color-card: #172130;
+  --color-border: #1E2D3D;
 
-  --color-text-text-primary: #E8E0D5;
-  --color-text-text-secondary: #8A9BAA;
-  --color-text-text-muted: #4A6A7A;
+  --color-main: #E8E0D5;
+  --color-sec: #8A9BAA;
+  --color-muted: #4A6A7A;
 
   --color-positive: #3D8B7A;
   --color-negative: #C0675A;
   --color-accent: #2A6496;
 }
+
 
 :root {
   /* Estas variables CSS siguen aquí por compatibilidad si es necesario, 

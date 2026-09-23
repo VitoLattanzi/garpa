@@ -29,10 +29,10 @@ function DashboardContent({
       <div className={`p-6 ${isDemo ? 'mt-0' : ''}`}>
         <div className="flex items-start justify-between mb-6">
           <div>                     
-            <h1 className="text-lg font-medium text-text-primary">
+            <h1 className="text-lg font-medium text-main">
               {t('dash_greeting')}{user ? `, ${user.nombre.split(' ')[0]}` : ''} 👋
             </h1>
-            <p className="text-sm text-text-muted">
+            <p className="text-sm text-muted">
               {deudasQueDebo.length > 0
                 ? `${deudasQueDebo.length} ${deudasQueDebo.length === 1 ? t('dash_debts_pending') : t('dash_debts_pending_plural')}`
                 : t('dash_all_good')}
@@ -42,48 +42,48 @@ function DashboardContent({
             <button onClick={() => openModal('nuevoGasto')} className="text-xs bg-positive text-background-base font-medium px-3 py-1.5 rounded-lg hover:opacity-90 transition">
               {lang === 'es' ? '+ Nuevo gasto' : '+ New expense'}
             </button>
-            <button onClick={() => {}} className="text-xs text-text-muted hover:text-text-secondary transition border border-background-border px-2.5 py-1.5 rounded-lg">
+            <button onClick={() => {}} className="text-xs text-muted hover:text-sec transition border border-border px-2.5 py-1.5 rounded-lg">
               {lang === 'es' ? 'EN' : 'ES'}
             </button>
           </div>
         </div>
 
         <div className="grid grid-cols-3 gap-3 mb-6">
-          <button onClick={() => openModal('debo')} className="bg-background-card border border-background-border rounded-xl p-4 text-left hover:border-negative transition">
-            <p className="text-xs text-text-muted mb-1">{t('dash_owe')}</p>
+          <button onClick={() => openModal('debo')} className="bg-card border border-border rounded-xl p-4 text-left hover:border-negative transition">
+            <p className="text-xs text-muted mb-1">{t('dash_owe')}</p>
             <p className="text-2xl font-medium text-negative">{formatMonto(totalDebo)}</p>
-            <p className="text-xs text-text-muted mt-1">{deudasQueDebo.length} {deudasQueDebo.length === 1 ? t('dash_debts') : t('dash_debts_plural')}</p>
+            <p className="text-xs text-muted mt-1">{deudasQueDebo.length} {deudasQueDebo.length === 1 ? t('dash_debts') : t('dash_debts_plural')}</p>
           </button>
-          <button onClick={() => openModal('meDeban')} className="bg-background-card border border-background-border rounded-xl p-4 text-left hover:border-positive transition">
-            <p className="text-xs text-text-muted mb-1">{t('dash_owed')}</p>
+          <button onClick={() => openModal('meDeban')} className="bg-card border border-border rounded-xl p-4 text-left hover:border-positive transition">
+            <p className="text-xs text-muted mb-1">{t('dash_owed')}</p>
             <p className="text-2xl font-medium text-positive">{formatMonto(totalMeDeben)}</p>
-            <p className="text-xs text-text-muted mt-1">{deudasQueMeDeben.length} {deudasQueMeDeben.length === 1 ? t('dash_people') : t('dash_people_plural')}</p>
+            <p className="text-xs text-muted mt-1">{deudasQueMeDeben.length} {deudasQueMeDeben.length === 1 ? t('dash_people') : t('dash_people_plural')}</p>
           </button>
-          <div className="bg-background-card border border-background-border rounded-xl p-4">
-            <p className="text-xs text-text-muted mb-1">{t('dash_balance')}</p>
+          <div className="bg-card border border-border rounded-xl p-4">
+            <p className="text-xs text-muted mb-1">{t('dash_balance')}</p>
             <p className={`text-2xl font-medium ${balanceNeto >= 0 ? 'text-positive' : 'text-negative'}`}>
               {balanceNeto >= 0 ? '+' : ''}{formatMonto(balanceNeto)}
             </p>
-            <p className="text-xs text-text-muted mt-1">{t('dash_general')}</p>
+            <p className="text-xs text-muted mt-1">{t('dash_general')}</p>
           </div>
         </div>
 
-        <h2 className="text-sm font-medium text-text-primary mb-3">{t('dash_movements')}</h2>
+        <h2 className="text-sm font-medium text-main mb-3">{t('dash_movements')}</h2>
         <div className="flex flex-col gap-2">
-          {gastos.length === 0 && <p className="text-sm text-text-muted">{t('dash_no_movements')}</p>}
+          {gastos.length === 0 && <p className="text-sm text-muted">{t('dash_no_movements')}</p>}
           {gastos.map((gasto: Gasto) => {
             const yoPague = gasto.pagado_por === userId
             return (
-              <div key={gasto.id} className="bg-background-card border border-background-border rounded-xl px-4 py-3 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-background-border flex items-center justify-center text-text-secondary shrink-0">
+              <div key={gasto.id} className="bg-card border border-border rounded-xl px-4 py-3 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-background-border flex items-center justify-center text-sec shrink-0">
                   <CreditCard size={18} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-text-primary truncate">
+                  <p className="text-sm text-main truncate">
                     {gasto.descripcion}
-                    {gasto.grupos && <span className="text-text-muted"> · {gasto.grupos.nombre}</span>}
+                    {gasto.grupos && <span className="text-muted"> · {gasto.grupos.nombre}</span>}
                   </p>
-                  <p className="text-xs text-text-muted">
+                  <p className="text-xs text-muted">
                     {yoPague ? t('dash_you_paid') : `${t('dash_paid')} ${gasto.pagador?.nombre}`} · {formatFecha(gasto.fecha)}
                   </p>
                 </div>
@@ -396,7 +396,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#0F1923]">
-        <p className="text-sm text-text-muted">Cargando...</p>
+        <p className="text-sm text-muted">Cargando...</p>
       </div>
     )
   }
@@ -434,3 +434,4 @@ export default function DashboardPage() {
     </DashboardLayout>
   )
 }
+
