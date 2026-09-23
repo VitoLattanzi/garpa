@@ -70,45 +70,45 @@ export default function ConfiguracionPage() {
       grupos={grupos}
       amigos={amigos}
     >
-      <div className="p-6 max-w-2xl mx-auto text-[#E8E0D5]">
-        <h1 className="text-2xl font-semibold mb-8 text-[#3D8B7A]">{lang === 'es' ? 'Configuración' : 'Settings'}</h1>
+      <div className="p-6 max-w-2xl mx-auto text-text-primary">
+        <h1 className="text-2xl font-semibold mb-8 text-positive">{lang === 'es' ? 'Configuración' : 'Settings'}</h1>
         
-        <div className="bg-[#172130] border border-[#1E2D3D] rounded-xl p-6 mb-8">
-          <h2 className="text-sm font-medium mb-4 text-[#8A9BAA]">{lang === 'es' ? 'Perfil' : 'Profile'}</h2>
+        <div className="bg-background-card border border-background-border rounded-xl p-6 mb-8">
+          <h2 className="text-sm font-medium mb-4 text-text-secondary">{lang === 'es' ? 'Perfil' : 'Profile'}</h2>
           {user ? (
             <div className="space-y-4">
               <div>
-                <label className="block text-xs text-[#4A6A7A] mb-1.5">{lang === 'es' ? 'Nombre' : 'Name'}</label>
+                <label className="block text-xs text-text-muted mb-1.5">{lang === 'es' ? 'Nombre' : 'Name'}</label>
                 <div className="flex gap-2">
                   <input 
                     value={nombre} 
                     onChange={e => setNombre(e.target.value)}
-                    className="flex-1 bg-[#0F1923] border border-[#1E2D3D] rounded-lg px-3 py-2 text-sm text-[#E8E0D5] outline-none focus:border-[#3D8B7A]"
+                    className="flex-1 bg-background-base border border-background-border rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:border-positive"
                   />
                   <button 
                     onClick={updateProfile} 
                     disabled={loading}
-                    className="bg-[#3D8B7A] text-[#0F1923] px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90"
+                    className="bg-positive text-background-base px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90"
                   >
                     {loading ? (lang === 'es' ? 'Guardando...' : 'Saving...') : (lang === 'es' ? 'Guardar' : 'Save')}
                   </button>
                 </div>
               </div>
               <div>
-                <p className="text-xs text-[#4A6A7A]">Email</p>
+                <p className="text-xs text-text-muted">Email</p>
                 <p className="text-sm">{user.email}</p>
               </div>
             </div>
           ) : (
-            <p className="text-sm text-[#4A6A7A]">{lang === 'es' ? 'Cargando perfil...' : 'Loading profile...'}</p>
+            <p className="text-sm text-text-muted">{lang === 'es' ? 'Cargando perfil...' : 'Loading profile...'}</p>
           )}
         </div>
 
-        <div className="bg-[#172130] border border-[#1E2D3D] rounded-xl p-6">
-          <h2 className="text-sm font-medium mb-4 text-[#8A9BAA]">{lang === 'es' ? 'Preferencias' : 'Preferences'}</h2>
+        <div className="bg-background-card border border-background-border rounded-xl p-6">
+          <h2 className="text-sm font-medium mb-4 text-text-secondary">{lang === 'es' ? 'Preferencias' : 'Preferences'}</h2>
           <div className="flex justify-between items-center">
               <span className="text-sm">{lang === 'es' ? 'Idioma' : 'Language'}</span>
-              <span className="text-xs text-[#3D8B7A] bg-[#3D8B7A]/10 px-2 py-1 rounded">{lang.toUpperCase()}</span>
+              <span className="text-xs text-positive bg-positive/10 px-2 py-1 rounded">{lang.toUpperCase()}</span>
           </div>
         </div>
       </div>

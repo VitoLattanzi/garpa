@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import EmailInvitacion from '@/components/EmailInvitacion'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { safeQuery } from '@/lib/supabase-utils'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -11,13 +12,13 @@ export async function POST(request: Request) {
     const supabase = await createSupabaseServerClient()
 
     // 1. Guardar la invitación en la DB
-    const { error: dbError } = await supabase
+    const { error: dbError } = await safeQuery<any>(supabase
       .from('invitaciones')
       .insert({
         invitado_por: usuarioInvitadorId,
         email_invitado: emailInvitado,
         estado: 'pendiente'
-      })
+      }))
 
     if (dbError) {
       console.error('Error guardando invitación:', dbError)

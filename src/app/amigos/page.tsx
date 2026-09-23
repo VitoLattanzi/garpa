@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { safeQuery } from '@/lib/supabase-utils'
+import { getDbErrorMessage } from '@/lib/db-errors'
 import { useLang } from '@/context/LangContext'
 import { Amigo, Deuda, Grupo } from '@/types/garpa'
 import DashboardLayout, { useDashboard } from '@/components/DashboardLayout'
@@ -13,23 +15,23 @@ function AmigosContent({
 
   return (
     <div className="flex flex-col gap-6 max-w-2xl mx-auto p-6">
-      <a href="/dashboard" className="text-sm text-[#4A6A7A] hover:text-[#8A9BAA] flex items-center gap-1">
+      <a href="/dashboard" className="text-sm text-text-muted hover:text-text-secondary flex items-center gap-1">
         ← {lang === 'es' ? 'Volver al dashboard' : 'Back to dashboard'}
       </a>
       
       <div className="flex flex-col gap-1">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-[#E8E0D5]">
+          <h1 className="text-2xl font-bold text-text-primary">
             {lang === 'es' ? 'Tus amigos' : 'Your friends'}
           </h1>
           <button 
             onClick={() => openModal('agregarAmigo')}
-            className="bg-[#3D8B7A] text-[#0F1923] text-sm px-4 py-2 rounded-lg font-medium hover:opacity-90"
+            className="bg-positive text-background-base text-sm px-4 py-2 rounded-lg font-medium hover:opacity-90"
           >
             {lang === 'es' ? '+ Agregar amigo' : '+ Add friend'}
           </button>
         </div>
-        <p className="text-sm text-[#4A6A7A]">
+        <p className="text-sm text-text-muted">
           {lang === 'es' 
             ? 'Gestioná tus contactos y verificá quién te debe o a quién le debés.' 
             : 'Manage your contacts and check who owes you or who you owe.'}
@@ -39,24 +41,24 @@ function AmigosContent({
       {/* Solicitudes de amistad */}
       {invitacionesRecibidas.length > 0 ? (
         <div className="mb-6">
-          <h2 className="text-sm font-bold text-[#E8E0D5] mb-3">{lang === 'es' ? 'Solicitudes pendientes' : 'Pending requests'}</h2>
+          <h2 className="text-sm font-bold text-text-primary mb-3">{lang === 'es' ? 'Solicitudes pendientes' : 'Pending requests'}</h2>
           <div className="flex flex-col gap-2">
             {invitacionesRecibidas.map((inv: any) => (
-                <div key={inv.id} className="flex justify-between items-center bg-[#172130] p-4 rounded-xl border border-[#1E2D3D]">
+                <div key={inv.id} className="flex justify-between items-center bg-background-card p-4 rounded-xl border border-background-border">
                   <div className="flex flex-col">
-                    <span className="text-sm font-medium text-[#E8E0D5]">{inv.solicitante.nombre}</span>
-                    <span className="text-xs text-[#4A6A7A]">{inv.solicitante.email}</span>
+                    <span className="text-sm font-medium text-text-primary">{inv.solicitante.nombre}</span>
+                    <span className="text-xs text-text-muted">{inv.solicitante.email}</span>
                   </div>
                   <div className="flex gap-2">
                     <button 
                       onClick={() => handleAccept(inv.id, inv.solicitante.id)}
-                      className="text-xs bg-[#3D8B7A] text-[#0F1923] px-3 py-1.5 rounded-lg font-medium hover:opacity-90 transition"
+                      className="text-xs bg-positive text-background-base px-3 py-1.5 rounded-lg font-medium hover:opacity-90 transition"
                     >
                       {lang === 'es' ? 'Aceptar' : 'Accept'}
                     </button>
                     <button 
                       onClick={() => handleReject(inv.id)}
-                      className="text-xs text-[#C0675A] bg-[#1E2D3D] border border-[#1E2D3D] hover:border-[#C0675A]/50 px-3 py-1.5 rounded-lg font-medium transition"
+                      className="text-xs text-negative bg-background-border border border-background-border hover:border-negative/50 px-3 py-1.5 rounded-lg font-medium transition"
                     >
                       {lang === 'es' ? 'Rechazar' : 'Reject'}
                     </button>
@@ -66,36 +68,36 @@ function AmigosContent({
           </div>
         </div>
       ) : (
-        <div className="mb-6 text-center py-4 border border-dashed border-[#1E2D3D] rounded-xl">
-           <p className="text-xs text-[#4A6A7A]">
+        <div className="mb-6 text-center py-4 border border-dashed border-background-border rounded-xl">
+           <p className="text-xs text-text-muted">
              {lang === 'es' ? 'No hay solicitudes de amistad nuevas.' : 'No new friend requests.'}
            </p>
         </div>
       )}
       
       {amigos.length === 0 ? (
-        <div className="bg-[#172130] border border-[#1E2D3D] rounded-2xl p-8 text-center">
-          <p className="text-[#8A9BAA]">
+        <div className="bg-background-card border border-background-border rounded-2xl p-8 text-center">
+          <p className="text-text-secondary">
             {lang === 'es' ? 'Todavía no tenés amigos agregados.' : 'No friends added yet.'}
           </p>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
           {amigos.map((amigo: any) => (
-            <div key={amigo.id} className="group relative flex items-center justify-between p-4 bg-[#172130] border border-[#1E2D3D] rounded-xl hover:border-[#3D8B7A]/50 transition-all">
+            <div key={amigo.id} className="group relative flex items-center justify-between p-4 bg-background-card border border-background-border rounded-xl hover:border-positive/50 transition-all">
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-[#1E2D3D] flex items-center justify-center text-[#3D8B7A] font-bold">
+                <div className="w-10 h-10 rounded-full bg-background-border flex items-center justify-center text-positive font-bold">
                   {amigo.perfil.nombre.slice(0, 2).toUpperCase()}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-[#E8E0D5]">{amigo.perfil.nombre}</p>
-                  <p className="text-xs text-[#4A6A7A]">{amigo.perfil.email}</p>
+                  <p className="text-sm font-medium text-text-primary">{amigo.perfil.nombre}</p>
+                  <p className="text-xs text-text-muted">{amigo.perfil.email}</p>
                 </div>
               </div>
               
               <div className="flex items-center gap-6">
                 <div className="text-right">
-                  <p className="text-xs text-[#4A6A7A] mb-0.5">
+                  <p className="text-xs text-text-muted mb-0.5">
                     {amigo.balance > 0 
                       ? (lang === 'es' ? 'Te debe' : 'Owes you')
                       : amigo.balance < 0 
@@ -104,7 +106,7 @@ function AmigosContent({
                   </p>
                   <span className={`text-sm font-bold ${
                     amigo.balance > 0 ? 'text-green-500' : 
-                    amigo.balance < 0 ? 'text-red-500' : 'text-[#8A9BAA]'
+                    amigo.balance < 0 ? 'text-red-500' : 'text-text-secondary'
                   }`}>
                     {amigo.balance !== 0 ? Math.abs(amigo.balance).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' }) : '-'}
                   </span>
@@ -112,7 +114,7 @@ function AmigosContent({
                 
                 <button 
                   onClick={() => handleDelete(amigo.id, amigo.balance, amigo.perfil.email)}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-[#C0675A]/10 rounded-lg text-[#C0675A]"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-negative/10 rounded-lg text-negative"
                   title={lang === 'es' ? 'Eliminar amigo' : 'Remove friend'}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -153,17 +155,17 @@ export default function AmigosPage() {
           setMyUserId(session.user.id)
           
           // Perfil
-          const { data: perfil } = await supabase
-            .from('usuarios').select('nombre, email').eq('id', session.user.id).single()
+          const { data: perfil } = await safeQuery<any>(supabase
+            .from('usuarios').select('nombre, email').eq('id', session.user.id).single())
           if (perfil) setUser(perfil)
           
           // Grupos
-          const { data: miembrosData } = await supabase
-            .from('miembros_grupo').select('grupo_id').eq('usuario_id', session.user.id)
+          const { data: miembrosData } = await safeQuery<any[]>(supabase
+            .from('miembros_grupo').select('grupo_id').eq('usuario_id', session.user.id))
           if (miembrosData && miembrosData.length > 0) {
             const grupoIds = miembrosData.map((m: any) => m.grupo_id)
-            const { data: gruposData } = await supabase
-              .from('grupos').select('id, nombre').in('id', grupoIds)
+            const { data: gruposData } = await safeQuery<any[]>(supabase
+              .from('grupos').select('id, nombre').in('id', grupoIds))
             if (gruposData) setGrupos(gruposData)
           }
       }
@@ -171,7 +173,7 @@ export default function AmigosPage() {
       const uid = session?.user.id || 'demo-user'
 
       // 1. Fetch amigos
-      const { data: rawAmigos } = await supabase
+      const { data: rawAmigos } = await safeQuery<any[]>(supabase
         .from('amistades')
         .select(`
           id,
@@ -179,17 +181,17 @@ export default function AmigosPage() {
           perfil:usuarios!amistades_amigo_id_fkey(nombre, email)
         `)
         .eq('usuario_id', uid)
-        .eq('estado', 'activo')
+        .eq('estado', 'activo'))
 
       // 2. Fetch invitaciones recibidas
-      const { data: rawInvitaciones, error: invitacionesError } = await supabase
+      const { data: rawInvitaciones, error: invitacionesError } = await safeQuery<any[]>(supabase
         .from('invitaciones')
         .select(`
           id,
           solicitante:usuarios!solicitante_id(id, nombre, email)
         `)
         .eq('invitado_id', uid)
-        .eq('estado', 'pendiente')
+        .eq('estado', 'pendiente'))
 
       if (invitacionesError) {
         console.error('Error fetching invitaciones:', invitacionesError)
@@ -198,11 +200,11 @@ export default function AmigosPage() {
       }
 
       // 3. Fetch deudas
-      const { data: deudas } = await supabase
+      const { data: deudas } = await safeQuery<any[]>(supabase
         .from('deudas')
         .select('*')
         .or(`acreedor_id.eq.${uid},deudor_id.eq.${uid}`)
-        .eq('saldado', false)
+        .eq('saldado', false))
 
       if (rawAmigos) {
         const amigosConBalance = rawAmigos.map((a: any) => {
@@ -227,23 +229,30 @@ export default function AmigosPage() {
 
   async function handleAccept(invitacionId: string, solicitanteId: string) {
     // 1. Crear amistad bidireccional
-    await supabase.from('amistades').insert([
+    const { error: amistadError } = await safeQuery(supabase.from('amistades').insert([
         { usuario_id: myUserId, amigo_id: solicitanteId, estado: 'activo' },
         { usuario_id: solicitanteId, amigo_id: myUserId, estado: 'activo' }
-    ])
+    ]))
+
+    if (amistadError) {
+        alert(lang === 'es' ? `Error al aceptar: ${getDbErrorMessage(amistadError)}` : `Error accepting: ${getDbErrorMessage(amistadError)}`)
+        return
+    }
 
     // 2. Actualizar estado invitacion
-    await supabase.from('invitaciones').update({ estado: 'aceptada' }).eq('id', invitacionId)
+    const { error: invError } = await safeQuery(supabase.from('invitaciones').update({ estado: 'aceptada' }).eq('id', invitacionId))
+    
+    if (invError) {
+        console.error('Error actualizando invitación:', invError)
+    }
 
     // 3. Actualizar estado local
     setInvitacionesRecibidas(prev => prev.filter(i => i.id !== invitacionId))
-    // Nota: Opcionalmente deberíamos recargar la lista de amigos aquí si quisiéramos verlos reflejados inmediatamente,
-    // pero por ahora el requisito es solo limpiar la invitación
   }
 
   async function handleReject(invitacionId: string) {
     // Actualizar estado invitacion a rechazada
-    await supabase.from('invitaciones').update({ estado: 'rechazada' }).eq('id', invitacionId)
+    await safeQuery(supabase.from('invitaciones').update({ estado: 'rechazada' }).eq('id', invitacionId))
     
     // Actualizar estado local
     setInvitacionesRecibidas(prev => prev.filter(i => i.id !== invitacionId))
@@ -269,11 +278,11 @@ export default function AmigosPage() {
     }
 
     // Intentar borrar por el ID de la amistad (PK)
-    const { error } = await supabase.from('amistades').delete().eq('id', amigoId)
+    const { error } = await safeQuery(supabase.from('amistades').delete().eq('id', amigoId))
     
     if (error) {
       console.error('Error al eliminar:', error)
-      alert(lang === 'es' ? 'Error al eliminar. Intentá de nuevo.' : 'Error deleting. Try again.')
+      alert(lang === 'es' ? `Error al eliminar: ${getDbErrorMessage(error)}` : `Error deleting: ${getDbErrorMessage(error)}`)
       return
     }
 

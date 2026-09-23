@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { safeQuery } from '@/lib/supabase-utils'
+import { getDbErrorMessage } from '@/lib/db-errors'
 import { useLang } from '@/context/LangContext'
 import { Amigo } from '@/types/garpa'
 
@@ -58,14 +60,15 @@ export default function ModalNuevoGrupo({ onClose, onCreated, amigos, userId, is
     }
 
     // Modo real — creamos el grupo en Supabase
-    const { data: grupo, error: grupoError } = await supabase
+    const { data: grupo, error: grupoError } = await safeQuery<any>(supabase
       .from('grupos')
       .insert({ nombre: nombre.trim(), color, creado_por: userId })
       .select('id, nombre, color')
-      .single()
+      .single())
 
     if (grupoError || !grupo) {
-      setError(lang === 'es' ? 'Error al crear el grupo' : 'Error creating group')
+      const errorKey = getDbErrorMessage(grupoError)
+      setError(lang === 'es' ? `Error al crear grupo: ${errorKey}` : `Error creating group: ${errorKey}`)
       setLoading(false)
       return
     }
@@ -80,7 +83,14 @@ export default function ModalNuevoGrupo({ onClose, onCreated, amigos, userId, is
       })),
     ]
 
-    await supabase.from('miembros_grupo').insert(miembros)
+    const { error: miembroError } = await safeQuery(supabase.from('miembros_grupo').insert(miembros))
+    
+    if (miembroError) {
+        const errorKey = getDbErrorMessage(miembroError)
+        setError(lang === 'es' ? `Error al agregar miembros: ${errorKey}` : `Error adding members: ${errorKey}`)
+        setLoading(false)
+        return
+    }
 
     onCreated(grupo)
   }

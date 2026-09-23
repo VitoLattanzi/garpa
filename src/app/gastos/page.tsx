@@ -62,7 +62,7 @@ export default function GastosPage() {
     loadData()
   }, [supabase])
 
-  if (loading) return <div className="p-6 text-[#4A6A7A]">Cargando...</div>
+  if (loading) return <div className="p-6 text-text-muted">Cargando...</div>
 
   return (
     <DashboardLayout
@@ -72,17 +72,17 @@ export default function GastosPage() {
       grupos={grupos}
       amigos={amigos}
     >
-      <div className="p-6 max-w-4xl mx-auto text-[#E8E0D5]">
-        <h1 className="text-2xl font-semibold mb-8 text-[#3D8B7A]">{lang === 'es' ? 'Historial de Gastos' : 'Expense History'}</h1>
+      <div className="p-6 max-w-4xl mx-auto text-text-primary">
+        <h1 className="text-2xl font-semibold mb-8 text-positive">{lang === 'es' ? 'Historial de Gastos' : 'Expense History'}</h1>
         
-        <div className="bg-[#172130] border border-[#1E2D3D] rounded-xl overflow-hidden">
+        <div className="bg-background-card border border-background-border rounded-xl overflow-hidden">
           {gastos.map(g => (
-            <div key={g.id} className="flex justify-between items-center px-6 py-4 border-b border-[#1E2D3D] last:border-0 hover:bg-[#1E2D3D]/50 transition">
+            <div key={g.id} className="flex justify-between items-center px-6 py-4 border-b border-background-border last:border-0 hover:bg-background-border/50 transition">
               <div>
                 <p className="text-sm font-medium">{g.descripcion}</p>
-                <p className="text-xs text-[#4A6A7A]">{g.grupos?.nombre || (lang === 'es' ? 'Amigos' : 'Friends')}</p>
+                <p className="text-xs text-text-muted">{g.grupos?.nombre || (lang === 'es' ? 'Amigos' : 'Friends')}</p>
               </div>
-              <p className="text-sm font-medium text-[#3D8B7A]">+${g.monto.toLocaleString('es-AR')}</p>
+              <p className="text-sm font-medium text-positive">+${g.monto.toLocaleString('es-AR')}</p>
             </div>
           ))}
         </div>
