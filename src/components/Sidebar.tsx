@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { useLang } from '@/context/LangContext'
 
 type SidebarProps = {
@@ -16,8 +17,8 @@ export default function Sidebar({ isDemo, user, grupos, onOpenModal }: SidebarPr
       <div className="flex flex-col h-full">
         {/* Header */}
         <div className="flex items-center p-6 h-16">
-          <Link href={isDemo ? '/' : '/dashboard'} className="text-base font-bold text-[#E8E0D5]">
-            GARPA
+          <Link href={isDemo ? '/' : '/dashboard'} className="flex items-center">
+            <Image src="/logo-garpa.svg" alt="GARPA" width={120} height={40} className="object-contain" />
           </Link>
         </div>
 

@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, createContext, useContext } from 'react'
+import Image from 'next/image'
+import Link from 'next/link'
 import Sidebar from '@/components/Sidebar'
 import BottomNav from '@/components/BottomNav'
 import ModalNuevoGrupo from '@/components/ModalNuevoGrupo'
@@ -72,10 +74,19 @@ export default function DashboardLayout({
           onOpenModal={openModal}
         />
 
-        {/* Main Content */}
-        <main className={`flex-1 overflow-y-auto pb-20 md:pb-0 ${isDemo ? 'mt-8' : ''}`}>
-          {children}
-        </main>
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col h-screen overflow-hidden">
+          {/* Mobile Header */}
+          <header className="md:hidden flex items-center px-6 h-16 bg-[#172130] border-b border-[#1E2D3D]">
+            <Link href={isDemo ? '/' : '/dashboard'} className="flex items-center">
+              <Image src="/logo-garpa.svg" alt="GARPA" width={100} height={32} className="object-contain" />
+            </Link>
+          </header>
+
+          <main className={`flex-1 overflow-y-auto pb-20 md:pb-0 ${isDemo ? 'mt-8' : ''}`}>
+            {children}
+          </main>
+        </div>
 
         {/* Bottom Navigation Mobile */}
         <BottomNav onOpenModal={openModal} />
