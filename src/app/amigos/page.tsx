@@ -188,7 +188,7 @@ export default function AmigosPage() {
         .from('invitaciones')
         .select(`
           id,
-          solicitante:usuarios!solicitante_id(id, nombre, email)
+          solicitante:usuarios!invitaciones_invitado_por_fkey(id, nombre, email)
         `)
         .eq('invitado_id', uid)
         .eq('estado', 'pendiente'))
