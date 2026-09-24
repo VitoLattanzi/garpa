@@ -9,6 +9,7 @@ export type Usuario = Database['public']['Tables']['usuarios']['Row']
 export type Grupo = Database['public']['Tables']['grupos']['Row']
 export type Gasto = Database['public']['Tables']['gastos']['Row'] & {
   grupos?: Database['public']['Tables']['grupos']['Row'] | null
+  pagador?: { nombre: string }
 }
 export type Amigo = Database['public']['Tables']['amistades']['Row'] & {
   perfil?: Usuario
