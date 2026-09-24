@@ -1,34 +1,23 @@
+import { Database } from './database.types'
+
 /**
  * Tipos globales de Garpa
- * Usados en el dashboard, modales y lógica de negocio
+ * Reemplazados por tipos generados automáticamente de Supabase
  */
 
-export type Usuario = {
-  id: string
-  nombre: string
-  email: string
+export type Usuario = Database['public']['Tables']['usuarios']['Row']
+export type Grupo = Database['public']['Tables']['grupos']['Row']
+export type Gasto = Database['public']['Tables']['gastos']['Row'] & {
+  grupos?: Database['public']['Tables']['grupos']['Row'] | null
 }
-
-export type Grupo = {
-  id: string
-  nombre: string
-  color?: string
+export type Amigo = Database['public']['Tables']['amistades']['Row'] & {
+  perfil?: Usuario
 }
+// Deuda, Miembro, Participante, SplitRow, SplitMode son tipos de dominio, se mantienen.
 
 export type Miembro = {
   usuario_id: string
   usuarios: { nombre: string; email: string }
-}
-
-export type Gasto = {
-  id: string
-  descripcion: string
-  monto: number
-  fecha: string
-  pagado_por: string
-  grupo_id: string | null
-  grupos: { nombre: string } | null
-  pagador: { nombre: string }
 }
 
 export type Participante = {
@@ -52,18 +41,8 @@ export type Deuda = {
   deudor: { nombre: string }
 }
 
-export type Amigo = {
-  id: string
-  usuario_id: string
-  amigo_id: string
-  estado: 'pendiente' | 'activo' | 'rechazado'
-  perfil: { nombre: string; email: string }
-}
-
-// Tipo para el modo de división del gasto
 export type SplitMode = 'igual' | 'porcentaje' | 'monto'
 
-// Tipo para cada fila del breakdown de división
 export type SplitRow = {
   usuario_id: string
   nombre: string

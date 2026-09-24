@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useLang } from '@/context/LangContext'
 
@@ -28,7 +29,9 @@ export default function LandingPage() {
 
       {/* ===== NAVBAR ===== */}
       <nav className="flex items-center justify-between px-8 py-5 border-b border-border">
-        <span className="text-lg font-medium">garpa</span>
+        <Link href="/" className="flex items-center">
+          <Image src="/logo-garpa.svg" alt="Garpa" width={100} height={32} className="object-contain" />
+        </Link>
         <div className="flex items-center gap-4">
 
           {/* Selector de idioma */}
@@ -139,8 +142,8 @@ export default function LandingPage() {
 
       {/* ===== FOOTER ===== */}
       <footer className="border-t border-border px-8 py-6 flex items-center justify-between max-w-5xl mx-auto">
-        <span className="text-sm text-muted">{t('footer_tagline')}</span>
-        <span className="text-sm text-muted">{t('footer_tech')}</span>
+        <Image src="/logo-garpa.svg" alt="Garpa" width={80} height={24} className="object-contain opacity-80" />
+        <span className="text-sm text-muted">© 2026 Garpa. Todos los derechos reservados.</span>
       </footer>
 
     </main>

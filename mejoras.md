@@ -11,7 +11,7 @@ Este archivo documenta los hallazgos de auditoría del código, clasificados por
 - [x] **Refactor de Estilos (Colores):**
     - Configurar `tailwind.config.ts` para incluir los colores base del proyecto (`theme.extend.colors`).
     - Reemplazar uso masivo de colores hardcodeados (ej. `bg-[#172130]`) por clases de utilidad de Tailwind (ej. `bg-card`).
-- [ ] **Generación Automática de Tipos:**
+- [x] **Generación Automática de Tipos:**
     - Configurar `supabase-cli`.
     - Generar tipos automáticamente desde el esquema de la DB y reemplazar los tipos manuales en `src/types/garpa.ts`.
 
