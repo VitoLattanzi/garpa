@@ -8,7 +8,8 @@ export async function safeQuery<T>(query: any) {
     if (result.error) throw result.error;
     return { data: result.data as T, error: null };
   } catch (error) {
-    console.error('Supabase query error:', error);
+    console.error('Supabase query error (Detailed):', JSON.stringify(error, null, 2));
+    console.error('Supabase query error (Object):', error);
     return { data: null, error };
   }
 }

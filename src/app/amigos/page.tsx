@@ -194,7 +194,7 @@ export default function AmigosPage() {
         .eq('estado', 'pendiente'))
 
       if (invitacionesError) {
-        console.error('Error fetching invitaciones:', invitacionesError)
+        console.error('Error fetching invitaciones (Detalle):', JSON.stringify(invitacionesError, null, 2));
       } else if (rawInvitaciones) {
         setInvitacionesRecibidas(rawInvitaciones)
       }

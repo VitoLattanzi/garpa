@@ -41,7 +41,8 @@ export default function ConfiguracionPage() {
             const grupoIds = miembrosData.map((m: any) => m.grupo_id)
             const { data: gruposData } = await supabase
               .from('grupos').select('id, nombre, color').in('id', grupoIds)
-            if (gruposData) setGrupos(gruposData)
+            if (gruposData) setGrupos(gruposData as any)
+
           }
 
           const { data: amistadesData } = await supabase
