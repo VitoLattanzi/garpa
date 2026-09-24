@@ -165,10 +165,10 @@ export default function ModalNuevoGrupo({ onClose, onCreated, amigos, userId, is
                 {lang === 'es' ? 'Seleccionar amigo...' : 'Select friend...'}
               </option>
               {amigos
-                .filter(a => !selectedAmigos.includes(a.amigo_id))
+                .filter(a => !selectedAmigos.includes(a.amigo_id || ''))
                 .map(amigo => (
                   <option key={amigo.id} value={amigo.amigo_id}>
-                    {amigo.perfil.nombre}
+                    {amigo.perfil?.nombre || amigo.perfil?.email}
                   </option>
                 ))
               }
@@ -177,14 +177,14 @@ export default function ModalNuevoGrupo({ onClose, onCreated, amigos, userId, is
             {/* Badges de amigos seleccionados */}
             <div className="flex flex-wrap gap-2">
               {amigos
-                .filter(a => selectedAmigos.includes(a.amigo_id))
+                .filter(a => selectedAmigos.includes(a.amigo_id || ''))
                 .map(amigo => (
                   <button
                     key={amigo.id}
-                    onClick={() => toggleAmigo(amigo.amigo_id)}
+                    onClick={() => toggleAmigo(amigo.amigo_id || '')}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border border-[#3D8B7A] text-[#3D8B7A] bg-[#3D8B7A]/10 transition"
                   >
-                    {amigo.perfil.nombre}
+                    {amigo.perfil?.nombre || amigo.perfil?.email}
                     <span>×</span>
                   </button>
                 ))

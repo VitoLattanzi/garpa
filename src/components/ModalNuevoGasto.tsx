@@ -65,7 +65,7 @@ export default function ModalNuevoGasto({ onClose, onCreated, grupos, amigos, us
         // Sin grupo o modo amigos — usamos amigos + el usuario mismo
         const base = [
           { usuario_id: userId, nombre: lang === 'es' ? 'Vos' : 'You' },
-          ...amigos.map(a => ({ usuario_id: a.amigo_id, nombre: a.perfil.nombre || a.perfil.email }))
+          ...amigos.map(a => ({ usuario_id: a.amigo_id || '', nombre: a.perfil?.nombre || a.perfil?.email || '' }))
         ]
         setMiembrosGrupo(base)
         // No llamamos recalcSplit aquí directamente porque el useEffect anterior se encargará

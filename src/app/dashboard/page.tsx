@@ -117,9 +117,9 @@ const DEMO_DEUDAS_INICIALES: Deuda[] = [
   { id: '4', monto: 2650, saldado: false, acreedor_id: DEMO_USER_ID, deudor_id: 'ana', gastos: { descripcion: 'Vuelo ida y vuelta', grupos: { nombre: 'Viaje a Brasil' } }, acreedor: { nombre: 'Usuario Demo' }, deudor: { nombre: 'Ana Martínez' } },
 ]
 const DEMO_GASTOS_INICIALES: Gasto[] = [
-  { id: '1', descripcion: 'Hotel Brasil', monto: 16800, fecha: new Date(Date.now() - 2 * 86400000).toISOString(), pagado_por: 'juan', grupo_id: '1', grupos: { nombre: 'Viaje a Brasil' }, pagador: { nombre: 'Juan García' } },
-  { id: '2', descripcion: 'Supermercado', monto: 9300, fecha: new Date(Date.now() - 3 * 86400000).toISOString(), pagado_por: DEMO_USER_ID, grupo_id: '2', grupos: { nombre: 'Casa compartida' }, pagador: { nombre: 'Usuario Demo' } },
-  { id: '3', descripcion: 'Bar El Federal', monto: 5400, fecha: new Date(Date.now() - 5 * 86400000).toISOString(), pagado_por: 'maria', grupo_id: '3', grupos: { nombre: 'Salidas' }, pagador: { nombre: 'María López' } },
+  { id: '1', descripcion: 'Hotel Brasil', monto: 16800, fecha: new Date(Date.now() - 2 * 86400000).toISOString(), pagado_por: 'juan', grupo_id: '1', grupos: { id: '1', nombre: 'Viaje a Brasil' }, pagador: { nombre: 'Juan García' }, categoria: 'viaje' },
+  { id: '2', descripcion: 'Supermercado', monto: 9300, fecha: new Date(Date.now() - 3 * 86400000).toISOString(), pagado_por: DEMO_USER_ID, grupo_id: '2', grupos: { id: '2', nombre: 'Casa compartida' }, pagador: { nombre: 'Usuario Demo' }, categoria: 'comida' },
+  { id: '3', descripcion: 'Bar El Federal', monto: 5400, fecha: new Date(Date.now() - 5 * 86400000).toISOString(), pagado_por: 'maria', grupo_id: '3', grupos: { id: '3', nombre: 'Salidas' }, pagador: { nombre: 'María López' }, categoria: 'ocio' },
 ]
 
 export default function DashboardPage() {

@@ -2,16 +2,37 @@ import { Database } from './database.types'
 
 /**
  * Tipos globales de Garpa
- * Reemplazados por tipos generados automáticamente de Supabase
+ * Basados en los tipos generados de Supabase pero flexibilizados para la UI y mocks
  */
 
-export type Usuario = Database['public']['Tables']['usuarios']['Row']
-export type Grupo = Database['public']['Tables']['grupos']['Row']
+export type Usuario = Partial<Database['public']['Tables']['usuarios']['Row']> & {
+  id?: string
+  nombre: string
+  email?: string
+  avatar_url?: string | null
+  fecha_registro?: string | null
+}
+
+export type Grupo = {
+  id: string
+  nombre: string
+  descripcion?: string | null
+  creado_por?: string | null
+  fecha_creacion?: string | null
+  color?: string
+}
+
 export type Gasto = Database['public']['Tables']['gastos']['Row'] & {
-  grupos?: Database['public']['Tables']['grupos']['Row'] | null
+  grupos?: Grupo | null
   pagador?: { nombre: string }
 }
-export type Amigo = Database['public']['Tables']['amistades']['Row'] & {
+
+export type Amigo = Partial<Database['public']['Tables']['amistades']['Row']> & {
+  id?: string
+  usuario_id?: string
+  amigo_id?: string
+  estado?: string
+  fecha_solicitud?: string | null
   perfil?: Usuario
 }
 // Deuda, Miembro, Participante, SplitRow, SplitMode son tipos de dominio, se mantienen.
