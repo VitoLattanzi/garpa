@@ -101,9 +101,9 @@ function DashboardContent({
 
 const DEMO_USER_ID = 'demo-user'
 const DEMO_GRUPOS: Grupo[] = [
-  { id: '1', nombre: 'Viaje a Brasil', creado_por: null, descripcion: null, fecha_creacion: null },
-  { id: '2', nombre: 'Casa compartida', creado_por: null, descripcion: null, fecha_creacion: null },
-  { id: '3', nombre: 'Salidas', creado_por: null, descripcion: null, fecha_creacion: null },
+  { id: '1', nombre: 'Viaje a Brasil', creado_por: null, descripcion: null, fecha_creacion: null } as Grupo,
+  { id: '2', nombre: 'Casa compartida', creado_por: null, descripcion: null, fecha_creacion: null } as Grupo,
+  { id: '3', nombre: 'Salidas', creado_por: null, descripcion: null, fecha_creacion: null } as Grupo,
 ]
 const DEMO_AMIGOS: Amigo[] = [
   { id: 'a1', usuario_id: DEMO_USER_ID, amigo_id: 'juan', estado: 'activo', perfil: { nombre: 'Juan García', email: 'juan@demo.com' } },
