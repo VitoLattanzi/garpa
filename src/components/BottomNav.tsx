@@ -23,7 +23,7 @@ export default function BottomNav({ onOpenModal }: BottomNavProps) {
         <Plus size={28} strokeWidth={2.5} />
       </button>
 
-      <Link href="/grupos" className="flex flex-col items-center gap-1 text-sec hover:text-main">
+      <Link href="/dashboard" className="flex flex-col items-center gap-1 text-sec hover:text-main">
         <LayoutGrid size={24} />
       </Link>
       <Link href="/configuracion" className="flex flex-col items-center gap-1 text-sec hover:text-main">
