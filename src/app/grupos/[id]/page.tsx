@@ -42,7 +42,7 @@ export default function GroupDashboardPage({ params }: { params: Promise<{ id: s
 
       if (!demoActivo && session) {
         // Fetch user profile
-        const { data: profile } = await safeQuery<any>(supabase.from('usuarios').select('*').eq('id', uid).single())
+        const { data: profile } = await safeQuery<any>(supabase.from('usuarios').select('id, nombre, email, avatar_url').eq('id', uid).single())
         setUser(profile)
 
         // Fetch groups
@@ -62,7 +62,7 @@ export default function GroupDashboardPage({ params }: { params: Promise<{ id: s
       }
 
       // 1. Grupo
-      const { data: g } = await safeQuery<any>(supabase.from('grupos').select('*').eq('id', groupId).single())
+      const { data: g } = await safeQuery<any>(supabase.from('grupos').select('id, nombre, descripcion, creado_por, fecha_creacion, color').eq('id', groupId).single())
       if (g) {
         setGrupo(g)
         setNombre(g.nombre)

@@ -33,3 +33,15 @@ Tables: usuarios, amistades, grupos, miembros_grupo, gastos, participantes_gasto
 - No error handling in dashboard fetches if Supabase fails
 
 ## Do not use Firebase anywhere -- this project is 100% Supabase.
+
+## Workflow de Gestión de Mejoras (mejoras.md)
+Para mantener el orden, todo hallazgo, deuda o error debe registrarse en `mejoras.md`:
+1. **Priorización:** El archivo debe estar organizado por prioridad:
+    - 1. Errores/Bugs Críticos
+    - 2. Seguridad
+    - 3. Funcionalidades
+    - 4. Deuda Técnica
+    - 5. Mejoras Recomendadas
+2. **Tareas:** Usar `[ ]` para pendientes y `[x]` para completadas.
+3. **Errores (Sección 1):** Registrar errores encontrados con detalles técnicos. Una vez resueltos y verificados, **eliminar completamente** la línea del error para mantener la lista limpia y enfocada en problemas activos.
+4. **Mantenimiento:** Mantener `mejoras.md` actualizado en cada interacción significativa.

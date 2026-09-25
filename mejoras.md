@@ -1,43 +1,26 @@
 # Plan de Mejoras - Proyecto Garpa
 
-Este archivo documenta los hallazgos de auditoría del código, clasificados por criticidad y tipo, para guiar el desarrollo continuo del proyecto.
+Este archivo documenta los hallazgos de auditoría del código, clasificados por criticidad y prioridad, para guiar el desarrollo continuo del proyecto hacia un estándar profesional de ingeniería.
 
-## 1. Bugs Críticos
-- [x] **Falta `auth-errors.ts`:** Crear el archivo `src/lib/auth-errors.ts` para centralizar el manejo de errores de autenticación.
-- [x] **Ausencia de Error Handling en Fetches:** Implementar `safeQuery` en todos los componentes que realizan llamadas a Supabase (`dashboard`, `grupos`, `gastos`).
-- [x] **Granularidad de Errores en Interacciones:** Mejorar el reporte de errores en interacciones (amistades, grupos, invitaciones) para especificar la causa raíz (ej. "usuario no encontrado", "error de red", "sin permisos").
+## 1. Auditoría de Seguridad y Configuración Crítica (Prioridad ALTA)
+- [ ] **Revisión de Variables de Entorno:** Garantizar que ninguna clave secreta (`service_role_key`, strings de conexión a DB) esté filtrada en el cliente o expuesta en componentes `use client`. Refinar la centralización en un archivo config.
+- [ ] **Auditoría de Supabase RLS:** Verificar que todas las Row Level Security policies en Supabase estén blindadas (`auth.uid() = usuario_id`) y no permitan lectura/escritura de datos cruzados entre usuarios no relacionados.
+- [ ] **Saneamiento de Inputs:** Asegurar que todos los formularios e inputs (especialmente los de búsqueda de usuarios y creación de gastos) estén protegidos contra inyecciones y datos malformados antes de llegar a la base de datos.
 
-## 2. Deuda Técnica
-- [x] **Refactor de Estilos (Colores):**
-    - Configurar `tailwind.config.ts` para incluir los colores base del proyecto (`theme.extend.colors`).
-    - Reemplazar uso masivo de colores hardcodeados (ej. `bg-[#172130]`) por clases de utilidad de Tailwind (ej. `bg-card`).
-- [x] **Generación Automática de Tipos:**
-    - Configurar `supabase-cli`.
-    - Generar tipos automáticamente desde el esquema de la DB y reemplazar los tipos manuales en `src/types/garpa.ts`.
+## 2. Refactorización y Calidad de Código (Deuda Técnica Crítica)
+- [ ] **Eliminación del tipado `any`:** Configurar `supabase-cli` para generar los tipos exactos de la base de datos y reemplazar todos los tipos manuales y `any` en `src/types/garpa.ts` y en las peticiones (fetches).
+- [ ] **Custom Hook `useSplitCalculator`:** Extraer la lógica matemática de cálculo de división de gastos y saldos fuera de los componentes UI. Debe ser una función pura y testeable.
+- [ ] **Limpieza de Código Muerto y Consistencia:** Revisar importaciones sin uso, variables declaradas no utilizadas y forzar el uso consistente de `camelCase` para variables y `PascalCase` para componentes en todo el proyecto.
+- [ ] **Refactor de Estilos:** Extraer los colores hexadecimales hardcodeados (ej. paleta Slate) y centralizarlos extendiendo el `tailwind.config.ts`.
 
-## 3. Mejoras UX/DX (Developer Experience)
-- [ ] **Centralización de Configuración:** Refinar la exposición de las variables de entorno para los clientes de Supabase.
-- [ ] **Error Boundaries:** Implementar `error.tsx` en los layouts de la app para capturar fallos de renderizado y ofrecer una UI de recuperación al usuario.
+## 3. Estabilidad y Manejo de Errores
+- [ ] **Implementación de Error Boundaries:** Crear archivos `error.tsx` globales y específicos por ruta en el App Router para capturar fallos de renderizado sin que se caiga la aplicación entera (White Screen of Death).
+- [ ] **Centralización de auth-errors.ts:** Conectar la lógica de manejo de errores de autenticación existente con las pantallas de login/registro.
+- [ ] **SafeQueries en Dashboard y Fetches:** Auditar que todas las llamadas a Supabase en Cliente y Servidor estén envueltas en bloques try/catch o validen explícitamente el objeto `error` devuelto por Supabase antes de actualizar el estado.
 
-## 4. Nuevas Funcionalidades
-- [ ] **Notificaciones In-App:** Implementar sistema de *toasts* para feedback de usuario tras acciones (crear gasto, aceptar invitación, etc.).
-- [ ] **Custom Hook `useSplitCalculator`:** Extraer la lógica de cálculo de división de gastos fuera de los componentes UI para mejorar la mantenibilidad y testabilidad.
+## 4. UX y Funcionalidades Pendientes
+- [ ] **Sistema de Notificaciones (Toasts):** Implementar feedback visual no bloqueante tras acciones del usuario (crear gasto, agregar amigo, rechazar invitación).
+- [ ] **Estados de Carga Skeleton:** Reemplazar los textos de "Cargando..." por Skeletons UI mientras se resuelven las promesas de datos.
 
-## 5. Mejoras Recomendadas
-- [ ] **Hooks de Git (Husky):** Configurar `husky` y `lint-staged` para asegurar el cumplimiento de estándares antes de cada commit.
-- [ ] **Optimización de Bundle:** Analizar el tamaño del bundle con `@next/bundle-analyzer` para asegurar tiempos de carga óptimos.
-- [ ] **Accesibilidad:** Auditar los componentes principales con `axe-core` para mejorar la accesibilidad (ARIA labels, contraste).
-
-## 6. Errores encontrados
-- [ ] **error en el agregar amigos, estamos teniendo un error a la hora de agregar a un usuario ya creado, sea desde el pnpm dev o desde prod en vercel, no entiendo bien el problema. por ejemplo aca en pnpm dev nos tira este error "Error fetching invitaciones: {}
-src/app/amigos/page.tsx (197:17) @ fetchData
-
-
-  195 |
-  196 |       if (invitacionesError) {
-> 197 |         console.error('Error fetching invitaciones:', invitacionesError)
-      |                 ^
-  198 |       } else if (rawInvitaciones) {
-  199 |         setInvitacionesRecibidas(rawInvitaciones)
-  200 |       }" 
-  revisalo 
+## 5. Mantenimiento y Tooling
+- [ ] **Hooks de Git (Husky & lint-staged):** Prevenir commits que rompan la build implementando un chequeo automático de linteo y formateo antes de cada commit.

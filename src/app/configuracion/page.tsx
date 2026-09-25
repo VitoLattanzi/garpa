@@ -29,7 +29,7 @@ export default function ConfiguracionPage() {
 
       if (!demoActivo && session) {
           const { data: perfil } = await supabase
-            .from('usuarios').select('*').eq('id', uid).single()
+            .from('usuarios').select('id, nombre, email, avatar_url').eq('id', uid).single()
           if (perfil) {
               setUser(perfil)
               setNombre(perfil.nombre)

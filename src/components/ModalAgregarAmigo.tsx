@@ -102,11 +102,19 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
     setInvitacionPrevia(null)
     setShowReenviar(false)
 
-    // 1. Verificamos si existe invitación previa en ambas direcciones
+    // 1. Obtenemos mi email para chequear invitaciones inversas
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user || !user.email) {
+       setError(lang === 'es' ? 'Error al obtener sesión' : 'Error getting session')
+       setLoading(false)
+       return
+    }
+
+    // 1. Verificamos si existe invitación previa
     const { data: invExistenteData, error: selectError } = await supabase
       .from('invitaciones')
-      .select('*')
-      .or(`and(solicitante_id.eq.${userId},invitado_id.eq.${usuarioEncontrado.id}),and(solicitante_id.eq.${usuarioEncontrado.id},invitado_id.eq.${userId})`)
+      .select('id, estado')
+      .or(`and(invitado_por.eq.${userId},email_invitado.eq.${usuarioEncontrado.email}),and(invitado_por.eq.${usuarioEncontrado.id},email_invitado.eq.${user.email})`)
       .limit(1)
 
     if (selectError) {
@@ -129,8 +137,8 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
     const { error: inviteError } = await supabase
       .from('invitaciones')
       .insert({
-        solicitante_id: userId,
-        invitado_id: usuarioEncontrado.id,
+        invitado_por: userId,
+        email_invitado: usuarioEncontrado.email,
         estado: 'pendiente',
       })
 

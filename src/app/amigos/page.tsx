@@ -184,25 +184,27 @@ export default function AmigosPage() {
         .eq('estado', 'activo'))
 
       // 2. Fetch invitaciones recibidas
-      const { data: rawInvitaciones, error: invitacionesError } = await safeQuery<any[]>(supabase
-        .from('invitaciones')
-        .select(`
-          id,
-          solicitante:usuarios!invitaciones_invitado_por_fkey(id, nombre, email)
-        `)
-        .eq('invitado_id', uid)
-        .eq('estado', 'pendiente'))
-
-      if (invitacionesError) {
-        console.error('Error fetching invitaciones (Detalle):', JSON.stringify(invitacionesError, null, 2));
-      } else if (rawInvitaciones) {
-        setInvitacionesRecibidas(rawInvitaciones)
+      if (session?.user.email) {
+        const { data: rawInvitaciones, error: invitacionesError } = await safeQuery<any[]>(supabase
+          .from('invitaciones')
+          .select(`
+            id,
+            solicitante:usuarios!invitaciones_invitado_por_fkey(id, nombre, email)
+          `)
+          .eq('email_invitado', session.user.email)
+          .eq('estado', 'pendiente'))
+        
+        if (invitacionesError) {
+          console.error('Error fetching invitaciones (Detalle):', JSON.stringify(invitacionesError, null, 2));
+        } else if (rawInvitaciones) {
+          setInvitacionesRecibidas(rawInvitaciones)
+        }
       }
 
       // 3. Fetch deudas
       const { data: deudas } = await safeQuery<any[]>(supabase
         .from('deudas')
-        .select('*')
+        .select('id, acreedor_id, deudor_id, monto, saldado')
         .or(`acreedor_id.eq.${uid},deudor_id.eq.${uid}`)
         .eq('saldado', false))
 
