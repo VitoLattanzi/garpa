@@ -29,6 +29,7 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
   const [error, setError] = useState<string | null>(null)
   const [usuarioEncontrado, setUsuarioEncontrado] = useState<{ id: string; nombre: string; email: string } | null>(null)
   const [showReenviar, setShowReenviar] = useState(false)
+  const [showAceptar, setShowAceptar] = useState(false) // Nuevo estado
   const [invitacionPrevia, setInvitacionPrevia] = useState<any>(null)
 
   /**
@@ -110,10 +111,10 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
        return
     }
 
-    // 1. Verificamos si existe invitación previa
+    // 1. Verificamos si existe invitación previa (Nuevo Esquema)
     const { data: invExistenteData, error: selectError } = await supabase
       .from('invitaciones')
-      .select('id, estado')
+      .select('id, estado, invitado_por, email_invitado')
       .or(`and(invitado_por.eq.${userId},email_invitado.eq.${usuarioEncontrado.email}),and(invitado_por.eq.${usuarioEncontrado.id},email_invitado.eq.${user.email})`)
       .limit(1)
 
@@ -124,11 +125,18 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
     }
 
     const invExistente = invExistenteData && invExistenteData.length > 0 ? invExistenteData[0] : null
-
+    
     if (invExistente) {
       setInvitacionPrevia(invExistente)
-      setError(lang === 'es' ? 'Ya existe una interacción previa con este usuario.' : 'There is already a previous interaction with this user.')
-      setShowReenviar(true)
+      const esRecibida = invExistente.email_invitado === user.email
+      
+      if (esRecibida) {
+          setShowAceptar(true)
+          setError(lang === 'es' ? 'Tenés una invitación pendiente de esta persona.' : 'You have a pending invitation from this person.')
+      } else {
+          setError(lang === 'es' ? 'Ya enviaste una invitación a este usuario.' : 'You already sent an invitation to this user.')
+          setShowReenviar(true)
+      }
       setLoading(false)
       return
     }
@@ -297,6 +305,17 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
                     ? (lang === 'es' ? 'Reenviando...' : 'Resending...')
                     : (lang === 'es' ? 'Reenviar solicitud' : 'Resend request')
                   }
+              </button>
+            ) : showAceptar ? (
+              <button
+                onClick={() => {
+                   // Redirigir a amigos o realizar la acción aquí
+                   onClose();
+                   window.location.href = '/amigos';
+                }}
+                className="w-full bg-[#3D8B7A] text-[#0F1923] font-medium py-2.5 rounded-lg text-sm hover:opacity-90 transition"
+              >
+                {lang === 'es' ? 'Ir a aceptar solicitud' : 'Go to accept request'}
               </button>
             ) : (
               <button
