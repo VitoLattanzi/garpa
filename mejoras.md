@@ -1,26 +1,27 @@
 # Plan de Mejoras - Proyecto Garpa
 
-Este archivo documenta los hallazgos de auditoría del código, clasificados por criticidad y prioridad, para guiar el desarrollo continuo del proyecto hacia un estándar profesional de ingeniería.
+Este archivo documenta los hallazgos de auditoría del código, clasificados por criticidad y prioridad, para guiar el desarrollo continuo del proyecto.
 
-## 1. Auditoría de Seguridad y Configuración Crítica (Prioridad ALTA)
-- [ ] **Revisión de Variables de Entorno:** Garantizar que ninguna clave secreta (`service_role_key`, strings de conexión a DB) esté filtrada en el cliente o expuesta en componentes `use client`. Refinar la centralización en un archivo config.
-- [ ] **Auditoría de Supabase RLS:** Verificar que todas las Row Level Security policies en Supabase estén blindadas (`auth.uid() = usuario_id`) y no permitan lectura/escritura de datos cruzados entre usuarios no relacionados.
-- [ ] **Saneamiento de Inputs:** Asegurar que todos los formularios e inputs (especialmente los de búsqueda de usuarios y creación de gastos) estén protegidos contra inyecciones y datos malformados antes de llegar a la base de datos.
+## 1. Errores/Bugs Críticos
+- [ ] **Migración del Sistema de Correos:** Eliminar cualquier dependencia de Resend en el código y reemplazarlo por un sistema de Webhook a n8n para evitar bloqueos de Sandbox.
 
-## 2. Refactorización y Calidad de Código (Deuda Técnica Crítica)
-- [ ] **Eliminación del tipado `any`:** Configurar `supabase-cli` para generar los tipos exactos de la base de datos y reemplazar todos los tipos manuales y `any` en `src/types/garpa.ts` y en las peticiones (fetches).
-- [ ] **Custom Hook `useSplitCalculator`:** Extraer la lógica matemática de cálculo de división de gastos y saldos fuera de los componentes UI. Debe ser una función pura y testeable.
-- [ ] **Limpieza de Código Muerto y Consistencia:** Revisar importaciones sin uso, variables declaradas no utilizadas y forzar el uso consistente de `camelCase` para variables y `PascalCase` para componentes en todo el proyecto.
-- [ ] **Refactor de Estilos:** Extraer los colores hexadecimales hardcodeados (ej. paleta Slate) y centralizarlos extendiendo el `tailwind.config.ts`.
+## 2. Seguridad
+- [ ] *No hay tareas de seguridad pendientes.*
 
-## 3. Estabilidad y Manejo de Errores
-- [ ] **Implementación de Error Boundaries:** Crear archivos `error.tsx` globales y específicos por ruta en el App Router para capturar fallos de renderizado sin que se caiga la aplicación entera (White Screen of Death).
-- [ ] **Centralización de auth-errors.ts:** Conectar la lógica de manejo de errores de autenticación existente con las pantallas de login/registro.
-- [ ] **SafeQueries en Dashboard y Fetches:** Auditar que todas las llamadas a Supabase en Cliente y Servidor estén envueltas en bloques try/catch o validen explícitamente el objeto `error` devuelto por Supabase antes de actualizar el estado.
+## 3. Funcionalidades
+- [ ] **Notificaciones In-App:** Implementar sistema de *toasts* para feedback de usuario tras acciones (crear gasto, aceptar invitación, etc.).
+- [ ] **Custom Hook `useSplitCalculator`:** Extraer la lógica de cálculo de división de gastos fuera de los componentes UI para mejorar la mantenibilidad y testabilidad.
 
-## 4. UX y Funcionalidades Pendientes
-- [ ] **Sistema de Notificaciones (Toasts):** Implementar feedback visual no bloqueante tras acciones del usuario (crear gasto, agregar amigo, rechazar invitación).
-- [ ] **Estados de Carga Skeleton:** Reemplazar los textos de "Cargando..." por Skeletons UI mientras se resuelven las promesas de datos.
+## 4. Deuda Técnica
+- [x] **Falta `auth-errors.ts`:** Crear el archivo `src/lib/auth-errors.ts` para centralizar el manejo de errores de autenticación.
+- [x] **Ausencia de Error Handling en Fetches:** Implementar `safeQuery` en todos los componentes que realizan llamadas a Supabase (`dashboard`, `grupos`, `gastos`).
+- [x] **Granularidad de Errores en Interacciones:** Mejorar el reporte de errores en interacciones (amistades, grupos, invitaciones).
+- [x] **Refactor de Estilos (Colores):** Configurar `tailwind.config.ts` y reemplazar colores hardcodeados.
+- [x] **Generación Automática de Tipos:** Configurar `supabase-cli` y reemplazar tipos manuales en `src/types/garpa.ts`.
+- [ ] **Centralización de Configuración:** Refinar la exposición de las variables de entorno para los clientes de Supabase.
+- [ ] **Error Boundaries:** Implementar `error.tsx` en los layouts de la app para capturar fallos de renderizado.
 
-## 5. Mantenimiento y Tooling
-- [ ] **Hooks de Git (Husky & lint-staged):** Prevenir commits que rompan la build implementando un chequeo automático de linteo y formateo antes de cada commit.
+## 5. Mejoras Recomendadas
+- [ ] **Hooks de Git (Husky):** Configurar `husky` y `lint-staged` para asegurar el cumplimiento de estándares antes de cada commit.
+- [ ] **Optimización de Bundle:** Analizar el tamaño del bundle con `@next/bundle-analyzer` para asegurar tiempos de carga óptimos.
+- [ ] **Accesibilidad:** Auditar los componentes principales con `axe-core` para mejorar la accesibilidad.

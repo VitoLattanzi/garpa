@@ -182,7 +182,7 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
 
   /**
    * Paso 2b — Envía una invitación a alguien que no está registrado
-   * Llama a la API /api/invite para guardar en DB y enviar email via Resend (EmailInvitacion.tsx)
+   * Llama a la API /api/invite para guardar en DB y notificar vía Webhook
    */
   async function handleInvitar() {
     setLoading(true)

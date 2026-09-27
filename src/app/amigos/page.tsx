@@ -188,8 +188,8 @@ export default function AmigosPage() {
         const { data: rawInvitaciones, error: invitacionesError } = await safeQuery<any[]>(supabase
           .from('invitaciones')
           .select(`
-            id,
-            solicitante:usuarios!invitaciones_invitado_por_fkey(id, nombre, email)
+            *,
+            usuarios!invitaciones_invitado_por_fkey(id, nombre, email)
           `)
           .eq('email_invitado', session.user.email)
           .eq('estado', 'pendiente'))
