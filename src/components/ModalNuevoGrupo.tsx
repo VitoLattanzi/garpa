@@ -5,6 +5,7 @@ import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { safeQuery } from '@/lib/supabase-utils'
 import { getDbErrorMessage } from '@/lib/db-errors'
 import { useLang } from '@/context/LangContext'
+import { useToast } from '@/context/ToastContext'
 import { Amigo } from '@/types/garpa'
 
 type Props = {
@@ -22,6 +23,7 @@ type Props = {
  */
 export default function ModalNuevoGrupo({ onClose, onCreated, amigos, userId, isDemo }: Props) {
   const { lang } = useLang()
+  const { showToast } = useToast()
   const supabase = createSupabaseBrowserClient()
 
   const [nombre, setNombre] = useState('')
@@ -68,7 +70,7 @@ export default function ModalNuevoGrupo({ onClose, onCreated, amigos, userId, is
 
     if (grupoError || !grupo) {
       const errorKey = getDbErrorMessage(grupoError)
-      setError(lang === 'es' ? `Error al crear grupo: ${errorKey}` : `Error creating group: ${errorKey}`)
+      showToast(lang === 'es' ? `Error al crear grupo: ${errorKey}` : `Error creating group: ${errorKey}`, 'error')
       setLoading(false)
       return
     }
@@ -87,11 +89,12 @@ export default function ModalNuevoGrupo({ onClose, onCreated, amigos, userId, is
     
     if (miembroError) {
         const errorKey = getDbErrorMessage(miembroError)
-        setError(lang === 'es' ? `Error al agregar miembros: ${errorKey}` : `Error adding members: ${errorKey}`)
+        showToast(lang === 'es' ? `Error al agregar miembros: ${errorKey}` : `Error adding members: ${errorKey}`, 'error')
         setLoading(false)
         return
     }
 
+    showToast(lang === 'es' ? '¡Grupo creado!' : 'Group created!', 'success')
     onCreated(grupo)
   }
 

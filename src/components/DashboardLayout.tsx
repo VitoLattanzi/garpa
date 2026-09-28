@@ -10,6 +10,8 @@ import ModalNuevoGasto from '@/components/ModalNuevoGasto'
 import ModalAgregarAmigo from '@/components/ModalAgregarAmigo'
 import { Grupo, Amigo, Deuda } from '@/types/garpa'
 import { useLang } from '@/context/LangContext'
+import { useIdleLogout } from '@/hooks/useIdleLogout'
+
 
 const DashboardContext = createContext<{ 
   openModal: (modal: string) => void,
@@ -54,6 +56,7 @@ export default function DashboardLayout({
   totalDebo = 0,
   totalMeDeben = 0
 }: DashboardLayoutProps) {
+  useIdleLogout() // Activar hook de inactividad
   const [activeModal, setActiveModal] = useState<string | null>(null)
   const { t, lang } = useLang()
   

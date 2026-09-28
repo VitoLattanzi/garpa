@@ -5,6 +5,7 @@ import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { safeQuery } from '@/lib/supabase-utils'
 import { getDbErrorMessage } from '@/lib/db-errors'
 import { useLang } from '@/context/LangContext'
+import { useToast } from '@/context/ToastContext'
 import { Amigo, Deuda, Grupo } from '@/types/garpa'
 import DashboardLayout, { useDashboard } from '@/components/DashboardLayout'
 
@@ -12,6 +13,8 @@ function AmigosContent({
   isDemo, user, myUserId, grupos, amigos, invitacionesRecibidas, handleAccept, handleReject, handleDelete, lang 
 }: any) {
   const { openModal } = useDashboard()
+  const { showToast } = useToast()
+
 
   return (
     <div className="flex flex-col gap-6 max-w-2xl mx-auto p-6">
@@ -132,6 +135,7 @@ function AmigosContent({
 
 export default function AmigosPage() {
   const { lang } = useLang()
+  const { showToast } = useToast()
   const supabase = createSupabaseBrowserClient()
   
   const [loading, setLoading] = useState(true)
@@ -237,7 +241,7 @@ export default function AmigosPage() {
     ]))
 
     if (amistadError) {
-        alert(lang === 'es' ? `Error al aceptar: ${getDbErrorMessage(amistadError)}` : `Error accepting: ${getDbErrorMessage(amistadError)}`)
+        showToast(lang === 'es' ? 'Error al aceptar' : 'Error accepting', 'error')
         return
     }
 
@@ -248,7 +252,7 @@ export default function AmigosPage() {
         console.error('Error actualizando invitación:', invError)
     }
 
-    // 3. Actualizar estado local
+    showToast(lang === 'es' ? 'Amistad aceptada' : 'Friendship accepted', 'success')
     setInvitacionesRecibidas(prev => prev.filter(i => i.id !== invitacionId))
   }
 
@@ -256,7 +260,7 @@ export default function AmigosPage() {
     // Actualizar estado invitacion a rechazada
     await safeQuery(supabase.from('invitaciones').update({ estado: 'rechazada' }).eq('id', invitacionId))
     
-    // Actualizar estado local
+    showToast(lang === 'es' ? 'Invitación rechazada' : 'Invitation rejected', 'success')
     setInvitacionesRecibidas(prev => prev.filter(i => i.id !== invitacionId))
   }
 
@@ -283,11 +287,11 @@ export default function AmigosPage() {
     const { error } = await safeQuery(supabase.from('amistades').delete().eq('id', amigoId))
     
     if (error) {
-      console.error('Error al eliminar:', error)
-      alert(lang === 'es' ? `Error al eliminar: ${getDbErrorMessage(error)}` : `Error deleting: ${getDbErrorMessage(error)}`)
+      showToast(lang === 'es' ? 'Error al eliminar amigo' : 'Error deleting friend', 'error')
       return
     }
 
+    showToast(lang === 'es' ? 'Amigo eliminado' : 'Friend deleted', 'success')
     setAmigos(prev => prev.filter(a => a.id !== amigoId))
   }
 
