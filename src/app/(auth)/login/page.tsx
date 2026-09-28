@@ -20,6 +20,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
@@ -65,6 +66,9 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError(null)
+
+    const cookieOptions = rememberMe ? { maxAge: 60 * 60 * 24 * 30 } : undefined
+    const supabase = createSupabaseBrowserClient(cookieOptions)
 
     const { error: authError } = await supabase.auth.signInWithPassword({
       email,
@@ -123,16 +127,27 @@ export default function LoginPage() {
               {showPassword ? '👁️' : '🔒'}
             </button>
           </div>
-          <button
-            type="button"
-            onClick={handleForgotPassword}
-            disabled={resetLoading}
-            className="text-xs text-right text-gray-500 hover:text-[#3D8B7A] transition"
-          >
-            {resetLoading 
-              ? (lang === 'es' ? 'Enviando...' : 'Sending...') 
-              : (lang === 'es' ? '¿Olvidaste tu contraseña?' : 'Forgot password?')}
-          </button>
+          <div className="flex items-center justify-between mt-2">
+            <label className="flex items-center gap-2 text-xs text-gray-500 cursor-pointer">
+               <input 
+                 type="checkbox" 
+                 checked={rememberMe} 
+                 onChange={(e) => setRememberMe(e.target.checked)}
+                 className="accent-[#3D8B7A]"
+               />
+               {lang === 'es' ? 'Mantener sesión iniciada' : 'Keep me logged in'}
+            </label>
+            <button
+              type="button"
+              onClick={handleForgotPassword}
+              disabled={resetLoading}
+              className="text-xs text-right text-gray-500 hover:text-[#3D8B7A] transition"
+            >
+              {resetLoading 
+                ? (lang === 'es' ? 'Enviando...' : 'Sending...') 
+                : (lang === 'es' ? '¿Olvidaste tu contraseña?' : 'Forgot password?')}
+            </button>
+          </div>
         </div>
 
         {error && (

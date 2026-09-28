@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useLang } from '@/context/LangContext'
+import { useToast } from '@/context/ToastContext'
+
 
 type Props = {
   onClose: () => void
@@ -21,7 +23,9 @@ type Estado = 'idle' | 'encontrado' | 'invitado' | 'error'
  */
 export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: Props) {
   const { lang } = useLang()
+  const { showToast } = useToast()
   const supabase = createSupabaseBrowserClient()
+
 
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
@@ -94,6 +98,18 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
   }
 
   /**
+   * Obtiene nombre del usuario actual para las notificaciones
+   */
+  async function getNombreInvitador() {
+    const { data: perfil } = await supabase
+      .from('usuarios')
+      .select('nombre')
+      .eq('id', userId)
+      .maybeSingle()
+    return perfil?.nombre || (lang === 'es' ? 'Un amigo' : 'A friend')
+  }
+
+  /**
    * Paso 2a — Envía solicitud de amistad (inserta en invitaciones)
    */
   async function handleAgregarExistente() {
@@ -103,6 +119,7 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
     setInvitacionPrevia(null)
     setShowReenviar(false)
 
+    // ... (1. Check existente logic remains same) ...
     // 1. Obtenemos mi email para chequear invitaciones inversas
     const { data: { user } } = await supabase.auth.getUser()
     if (!user || !user.email) {
@@ -156,6 +173,19 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
       return
     }
 
+    // 3. Notificar vía Webhook (API)
+    const nombre = await getNombreInvitador()
+    await fetch('/api/notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'INVITE',
+        email: usuarioEncontrado.email,
+        nombreInvitador: nombre
+      })
+    })
+
+    showToast(lang === 'es' ? '¡Solicitud enviada!' : 'Request sent!')
     setEstado('invitado')
     setLoading(false)
   }
@@ -175,6 +205,17 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
       if (updateError) {
           setError(lang === 'es' ? 'Error al reenviar' : 'Error resending')
       } else {
+          // Reenviar notificación también
+          const nombre = await getNombreInvitador()
+          await fetch('/api/notify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'INVITE',
+              email: usuarioEncontrado.email,
+              nombreInvitador: nombre
+            })
+          })
           setEstado('invitado')
       }
       setLoading(false)
@@ -227,10 +268,11 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
 
       const result = await res.json()
 
-      if (!res.ok || !result.success) {
+       if (!res.ok || !result.success) {
         throw new Error(result.error || 'Error al enviar invitación')
       }
 
+      showToast(lang === 'es' ? '¡Invitación enviada!' : 'Invitation sent!')
       setEstado('invitado')
     } catch (err: any) {
       console.error('Error enviando invitación:', err)
@@ -261,10 +303,10 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
         {estado === 'invitado' && (
           <div className="text-center py-4">
             <div className="text-4xl mb-3">📬</div>
-            <p className="text-sm font-medium text-[#E8E0D5] mb-2">
+            <p className="text-sm font-medium text-white mb-2">
               {lang === 'es' ? '¡Invitación enviada!' : 'Invitation sent!'}
             </p>
-            <p className="text-xs text-[#4A6A7A]">
+            <p className="text-xs text-gray-300">
               {lang === 'es'
                 ? `Le mandamos un email a ${email} para que se registre en Garpa.`
                 : `We sent an email to ${email} to join Garpa.`
@@ -282,7 +324,7 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
         {/* Estado: usuario encontrado — confirmar */}
         {estado === 'encontrado' && usuarioEncontrado && (
           <div>
-            <p className="text-xs text-[#4A6A7A] mb-4">
+            <p className="text-xs text-gray-300 mb-4">
               {lang === 'es' ? 'Encontramos este usuario:' : 'We found this user:'}
             </p>
             <div className="flex items-center gap-3 bg-[#0F1923] border border-[#1E2D3D] rounded-xl px-4 py-3 mb-4">
@@ -290,8 +332,8 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
                 {usuarioEncontrado.nombre.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
               </div>
               <div>
-                <p className="text-sm font-medium text-[#E8E0D5]">{usuarioEncontrado.nombre}</p>
-                <p className="text-xs text-[#4A6A7A]">{usuarioEncontrado.email}</p>
+                <p className="text-sm font-medium text-white">{usuarioEncontrado.nombre}</p>
+                <p className="text-xs text-gray-300">{usuarioEncontrado.email}</p>
               </div>
             </div>
             {error && <p className="text-xs text-[#C0675A] mb-3">{error}</p>}

@@ -1,31 +1,37 @@
 import { NextResponse } from 'next/server'
+import nodemailer from 'nodemailer'
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+})
 
 export async function POST(request: Request) {
   try {
-    const payload = await request.json()
-    
-    // Disparar Webhook a n8n
-    const webhookUrl = process.env.N8N_WEBHOOK_URL
-    if (!webhookUrl) {
-        console.error('N8N_WEBHOOK_URL no configurada')
-        return NextResponse.json({ success: false, error: 'Configuración faltante' }, { status: 500 })
-    }
+    const { userName, friendEmail, saldoPendiente } = await request.json()
 
-    const res = await fetch(webhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...payload,
-        type: 'DELETE_NOTIFICATION'
+    try {
+      const info = await transporter.sendMail({
+        from: `"Garpa" <${process.env.EMAIL_USER}>`,
+        to: friendEmail,
+        subject: 'Garpa - Notificación de eliminación',
+        html: `
+          <div style="font-family: Arial, sans-serif; padding: 20px;">
+            <p>${userName} te ha eliminado de sus amigos.</p>
+            <p>Quedó un saldo pendiente de <strong>$${saldoPendiente}</strong>.</p>
+          </div>
+        `
       })
-    })
-
-    if (!res.ok) {
-      console.error('Error en Webhook de n8n:', await res.text())
-      return NextResponse.json({ success: false, error: 'Error al procesar notificación' }, { status: 500 })
+      console.log("Éxito de Nodemailer (NotifyDelete). ID:", info.messageId)
+    } catch (error) {
+      console.error("Error detallado de Nodemailer (NotifyDelete):", error)
+      return NextResponse.json({ success: false, error: 'Error al enviar el email' }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, message: 'Notificación enviada vía webhook' })
+    return NextResponse.json({ success: true, message: 'Notificación enviada' })
   } catch (error) {
     console.error('Error en ruta notify-delete:', error)
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 })

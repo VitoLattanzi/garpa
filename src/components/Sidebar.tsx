@@ -18,7 +18,7 @@ export default function Sidebar({ isDemo, user, grupos, onOpenModal }: SidebarPr
         {/* Header */}
         <div className="flex items-center p-6 h-16">
           <Link href={isDemo ? '/' : '/dashboard'} className="flex items-center">
-            <Image src="/logo-garpa.svg" alt="GARPA" width={120} height={40} className="object-contain" />
+            <Image src="/logo-garpa.svg" alt="GARPA" width={120} height={40} className="object-contain" priority />
           </Link>
         </div>
 

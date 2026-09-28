@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Geist } from 'next/font/google'
 import './globals.css'
 import { LangProvider } from '@/context/LangContext'
+import { ToastProvider } from '@/context/ToastContext'
 
 /**
  * Fuente principal de la app
@@ -33,7 +34,9 @@ export default function RootLayout({
     <html lang="es">
       <body className={`${geist.variable} font-sans antialiased bg-base text-main`}>
         <LangProvider>
-          {children}
+          <ToastProvider>
+            {children}
+          </ToastProvider>
         </LangProvider>
       </body>
     </html>

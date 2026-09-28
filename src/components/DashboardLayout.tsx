@@ -79,7 +79,7 @@ export default function DashboardLayout({
           {/* Mobile Header */}
           <header className="md:hidden flex items-center px-6 h-16 bg-[#172130] border-b border-[#1E2D3D]">
             <Link href={isDemo ? '/' : '/dashboard'} className="flex items-center">
-              <Image src="/logo-garpa.svg" alt="GARPA" width={100} height={32} className="object-contain" />
+              <Image src="/logo-garpa.svg" alt="GARPA" width={100} height={32} className="object-contain" priority />
             </Link>
           </header>
 
