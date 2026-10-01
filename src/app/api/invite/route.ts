@@ -37,6 +37,7 @@ export async function POST(request: Request) {
         from: `"Garpa" <${process.env.EMAIL_USER}>`,
         to: emailInvitado,
         subject: `${nombreInvitador} te invitó a Garpa`,
+        text: `${nombreInvitador} te ha invitado a unirte a Garpa para gestionar gastos y deudas con amigos. Acepta la invitación aquí: ${process.env.NEXT_PUBLIC_SITE_URL || 'https://garpa.vercel.app'}/register`,
         html: `
           <div style="font-family: Arial, sans-serif; padding: 20px;">
             <h1>¡Hola!</h1>
@@ -46,7 +47,10 @@ export async function POST(request: Request) {
                Aceptar invitación
             </a>
           </div>
-        `
+        `,
+        headers: {
+          'Reply-To': process.env.EMAIL_USER || ''
+        }
       })
       console.log("Éxito de Nodemailer. ID:", info.messageId)
     } catch (error) {

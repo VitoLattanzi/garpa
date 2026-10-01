@@ -18,12 +18,16 @@ export async function POST(request: Request) {
         from: `"Garpa" <${process.env.EMAIL_USER}>`,
         to: friendEmail,
         subject: 'Garpa - Notificación de eliminación',
+        text: `${userName} te ha eliminado de sus amigos. Quedó un saldo pendiente de $${saldoPendiente}.`,
         html: `
           <div style="font-family: Arial, sans-serif; padding: 20px;">
             <p>${userName} te ha eliminado de sus amigos.</p>
             <p>Quedó un saldo pendiente de <strong>$${saldoPendiente}</strong>.</p>
           </div>
-        `
+        `,
+        headers: {
+          'Reply-To': process.env.EMAIL_USER || ''
+        }
       })
       console.log("Éxito de Nodemailer (NotifyDelete). ID:", info.messageId)
     } catch (error) {

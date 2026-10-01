@@ -43,7 +43,13 @@ export async function POST(request: Request) {
       from: `"Garpa" <${process.env.EMAIL_USER}>`,
       to: type === 'DELETE' ? friendEmail : email,
       subject,
-      html
+      text: type === 'INVITE' 
+        ? `${nombreInvitador} te ha invitado a unirte a Garpa. Acepta aquí: ${process.env.NEXT_PUBLIC_SITE_URL || 'https://garpa.vercel.app'}/register`
+        : `${userName} te ha eliminado de sus amigos. Saldo pendiente: $${saldoPendiente}`,
+      html,
+      headers: {
+        'Reply-To': process.env.EMAIL_USER || ''
+      }
     })
 
     return NextResponse.json({ success: true })
