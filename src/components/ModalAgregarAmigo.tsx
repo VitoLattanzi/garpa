@@ -179,7 +179,7 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        type: 'INVITE',
+        type: 'FRIEND_REQUEST',
         email: usuarioEncontrado.email,
         nombreInvitador: nombre
       })
@@ -211,7 +211,7 @@ export default function ModalAgregarAmigo({ onClose, onAdded, userId, isDemo }: 
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              type: 'INVITE',
+              type: 'FRIEND_REQUEST',
               email: usuarioEncontrado.email,
               nombreInvitador: nombre
             })

@@ -28,6 +28,18 @@ export async function POST(request: Request) {
           </a>
         </div>
       `
+    } else if (type === 'FRIEND_REQUEST') {
+      subject = `${nombreInvitador} te envió una solicitud de amistad`
+      html = `
+        <div style="font-family: Arial, sans-serif; padding: 20px;">
+          <h1>¡Nueva solicitud de amistad!</h1>
+          <p>${nombreInvitador} te ha enviado una solicitud de amistad en <strong>Garpa</strong>.</p>
+          <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://garpa.vercel.app'}/amigos" 
+             style="background: #3D8B7A; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+             Ver solicitud
+          </a>
+        </div>
+      `
     } else if (type === 'DELETE') {
       subject = 'Garpa - Notificación de eliminación'
       html = `
@@ -45,6 +57,8 @@ export async function POST(request: Request) {
       subject,
       text: type === 'INVITE' 
         ? `${nombreInvitador} te ha invitado a unirte a Garpa. Acepta aquí: ${process.env.NEXT_PUBLIC_SITE_URL || 'https://garpa.vercel.app'}/register`
+        : type === 'FRIEND_REQUEST'
+        ? `${nombreInvitador} te ha enviado una solicitud de amistad en Garpa. Puedes verla aquí: ${process.env.NEXT_PUBLIC_SITE_URL || 'https://garpa.vercel.app'}/amigos`
         : `${userName} te ha eliminado de sus amigos. Saldo pendiente: $${saldoPendiente}`,
       html,
       headers: {
