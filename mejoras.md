@@ -10,7 +10,7 @@ Este archivo documenta los hallazgos de auditoría del código, clasificados por
 
 ## 3. Funcionalidades
 - [x] **Notificaciones In-App:** Implementar sistema de *toasts* para feedback de usuario tras acciones.
-- [ ] **Custom Hook `useSplitCalculator`:** Extraer la lógica de cálculo de división de gastos fuera de los componentes UI para mejorar la mantenibilidad y testabilidad.
+- [x] **Custom Hook `useSplitCalculator`:** Extraer la lógica de cálculo de división de gastos fuera de los componentes UI para mejorar la mantenibilidad y testabilidad.
 
 ## 4. Deuda Técnica
 - [x] **Falta `auth-errors.ts`:** Crear el archivo `src/lib/auth-errors.ts` para centralizar el manejo de errores de autenticación.
@@ -20,10 +20,10 @@ Este archivo documenta los hallazgos de auditoría del código, clasificados por
 - [x] **Generación Automática de Tipos:** Configurar `supabase-cli` y reemplazar tipos manuales en `src/types/garpa.ts`.
 - [x] **Accesibilidad en Modal Agregar Amigo:** Corregir el contraste del texto en el modal.
 - [ ] **Centralización de Configuración:** Refinar la exposición de las variables de entorno para los clientes de Supabase.
-- [ ] **Error Boundaries:** Implementar `error.tsx` en los layouts de la app para capturar fallos de renderizado.
+- [x] **Error Boundaries:** Implementar `error.tsx` en los layouts de la app para capturar fallos de renderizado.
 
 ## 5. Mejoras Recomendadas
-- [ ] **Hooks de Git (Husky):** Configurar `husky` y `lint-staged` para asegurar el cumplimiento de estándares antes de cada commit.
+- [x] **Hooks de Git (Husky):** Configurar `husky` y `lint-staged` para asegurar el cumplimiento de estándares antes de cada commit.
 - [ ] **Optimización de Bundle:** Analizar el tamaño del bundle con `@next/bundle-analyzer` para asegurar tiempos de carga óptimos.
 - [ ] **Accesibilidad:** Auditar los componentes principales con `axe-core` para mejorar la accesibilidad.
 - [ ] **Infraestructura de Correos:** Reemplazar Nodemailer local por un servicio transaccional (ej. Resend, SendGrid) con dominio verificado (SPF/DKIM) para garantizar entregabilidad en Inbox.

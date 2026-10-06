@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createSupabaseBrowserClient } from '../lib/supabase-browser'
 import { useLang } from '../context/LangContext'
+import { useSplitCalculator } from '../hooks/useSplitCalculator'
 import { Grupo, Amigo, SplitMode, SplitRow } from '../types/garpa'
 
 type Props = {
@@ -22,6 +23,7 @@ type Props = {
  */
 export default function ModalNuevoGasto({ onClose, onCreated, grupos, amigos, userId, isDemo }: Props) {
   const { lang } = useLang()
+  const { calculateSplit } = useSplitCalculator()
   const supabase = createSupabaseBrowserClient()
 
   const [descripcion, setDescripcion] = useState('')
@@ -35,13 +37,6 @@ export default function ModalNuevoGasto({ onClose, onCreated, grupos, amigos, us
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  /**
-   * Cuando cambian los miembros, seleccionamos a todos por defecto
-   */
-  useEffect(() => {
-    setSelectedParticipants(new Set(miembrosGrupo.map(m => m.usuario_id)))
-  }, [miembrosGrupo])
-
   function toggleParticipant(userId: string) {
     const next = new Set(selectedParticipants)
     if (next.has(userId)) {
@@ -52,7 +47,7 @@ export default function ModalNuevoGasto({ onClose, onCreated, grupos, amigos, us
     setSelectedParticipants(next)
     // Recalcular split con los participantes seleccionados
     const selected = miembrosGrupo.filter(m => next.has(m.usuario_id))
-    recalcSplit(selected, monto, splitMode)
+    setParticipantes(calculateSplit(selected, monto, splitMode))
   }
 
   /**
@@ -68,7 +63,7 @@ export default function ModalNuevoGasto({ onClose, onCreated, grupos, amigos, us
           ...amigos.map(a => ({ usuario_id: a.amigo_id || '', nombre: a.perfil?.nombre || a.perfil?.email || '' }))
         ]
         setMiembrosGrupo(base)
-        // No llamamos recalcSplit aquí directamente porque el useEffect anterior se encargará
+        setSelectedParticipants(new Set(base.map(m => m.usuario_id)))
         return
       }
 
@@ -80,6 +75,7 @@ export default function ModalNuevoGasto({ onClose, onCreated, grupos, amigos, us
           { usuario_id: 'maria', nombre: 'María' },
         ]
         setMiembrosGrupo(demoMiembros)
+        setSelectedParticipants(new Set(demoMiembros.map(m => m.usuario_id)))
         return
       }
 
@@ -90,60 +86,17 @@ export default function ModalNuevoGasto({ onClose, onCreated, grupos, amigos, us
         .eq('grupo_id', grupoId)
 
       if (data) {
-        const miembros = data.map((m: any) => ({
+        const miembros = data.map((m: { usuario_id: string; usuarios?: { nombre: string; email: string } }) => ({
           usuario_id: m.usuario_id,
           nombre: m.usuarios?.nombre || m.usuarios?.email || 'Usuario',
         }))
         setMiembrosGrupo(miembros)
+        setSelectedParticipants(new Set(miembros.map(m => m.usuario_id)))
       }
     }
 
     cargarMiembros()
-  }, [grupoId, expenseType, amigos, userId, isDemo, supabase])
-
-  /**
-   * Recalcula el breakdown de división cada vez que cambia
-   * el monto, el modo de split o los participantes seleccionados
-   */
-  function recalcSplit(
-    miembros: { usuario_id: string; nombre: string }[],
-    montoStr: string,
-    mode: SplitMode,
-    prevRows?: SplitRow[]
-  ) {
-    const total = parseFloat(montoStr) || 0
-    const count = miembros.length
-
-    const rows: SplitRow[] = miembros.map((m, i) => {
-      if (mode === 'igual') {
-        return {
-          usuario_id: m.usuario_id,
-          nombre: m.nombre,
-          monto: count > 0 ? total / count : 0,
-          porcentaje: count > 0 ? 100 / count : 0,
-        }
-      }
-      if (mode === 'porcentaje') {
-        const pct = prevRows?.[i]?.porcentaje ?? (count > 0 ? 100 / count : 0)
-        return {
-          usuario_id: m.usuario_id,
-          nombre: m.nombre,
-          monto: total * pct / 100,
-          porcentaje: pct,
-        }
-      }
-      // monto fijo
-      const montoFijo = prevRows?.[i]?.monto ?? (count > 0 ? total / count : 0)
-      return {
-        usuario_id: m.usuario_id,
-        nombre: m.nombre,
-        monto: montoFijo,
-        porcentaje: total > 0 ? montoFijo / total * 100 : 0,
-      }
-    })
-
-    setParticipantes(rows)
-  }
+  }, [grupoId, expenseType, amigos, userId, isDemo, supabase, lang])
 
   // Actualiza el monto de un participante específico
   function updateParticipante(index: number, value: string) {
@@ -173,14 +126,14 @@ export default function ModalNuevoGasto({ onClose, onCreated, grupos, amigos, us
   function handleSplitMode(mode: SplitMode) {
     setSplitMode(mode)
     const selected = miembrosGrupo.filter(m => selectedParticipants.has(m.usuario_id))
-    recalcSplit(selected, monto, mode, participantes)
+    setParticipantes(calculateSplit(selected, monto, mode, participantes))
   }
 
   // Recalcula cuando cambia el monto
   function handleMontoChange(val: string) {
     setMonto(val)
     const selected = miembrosGrupo.filter(m => selectedParticipants.has(m.usuario_id))
-    recalcSplit(selected, val, splitMode, participantes)
+    setParticipantes(calculateSplit(selected, val, splitMode, participantes))
   }
 
   async function handleSubmit() {
