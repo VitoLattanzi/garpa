@@ -86,10 +86,13 @@ export default function ModalNuevoGasto({ onClose, onCreated, grupos, amigos, us
         .eq('grupo_id', grupoId)
 
       if (data) {
-        const miembros = data.map((m: { usuario_id: string; usuarios?: { nombre: string; email: string } }) => ({
-          usuario_id: m.usuario_id,
-          nombre: m.usuarios?.nombre || m.usuarios?.email || 'Usuario',
-        }))
+        const miembros = data.map((m: { usuario_id: string; usuarios?: { nombre: string; email: string }[] | { nombre: string; email: string } }) => {
+          const usuario = Array.isArray(m.usuarios) ? m.usuarios[0] : m.usuarios
+          return {
+            usuario_id: m.usuario_id,
+            nombre: usuario?.nombre || usuario?.email || 'Usuario',
+          }
+        })
         setMiembrosGrupo(miembros)
         setSelectedParticipants(new Set(miembros.map(m => m.usuario_id)))
       }
