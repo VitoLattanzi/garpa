@@ -19,13 +19,13 @@ Este archivo documenta los hallazgos de auditoría del código, clasificados por
 - [x] **Refactor de Estilos (Colores):** Configurar `tailwind.config.ts` y reemplazar colores hardcodeados.
 - [x] **Generación Automática de Tipos:** Configurar `supabase-cli` y reemplazar tipos manuales en `src/types/garpa.ts`.
 - [x] **Accesibilidad en Modal Agregar Amigo:** Corregir el contraste del texto en el modal.
-- [ ] **Centralización de Configuración:** Refinar la exposición de las variables de entorno para los clientes de Supabase.
+- [x] **Centralización de Configuración:** Refinar la exposición de las variables de entorno para los clientes de Supabase.
 - [x] **Error Boundaries:** Implementar `error.tsx` en los layouts de la app para capturar fallos de renderizado.
 
 ## 5. Mejoras Recomendadas
 - [x] **Hooks de Git (Husky):** Configurar `husky` y `lint-staged` para asegurar el cumplimiento de estándares antes de cada commit.
 - [ ] **Optimización de Bundle:** Analizar el tamaño del bundle con `@next/bundle-analyzer` para asegurar tiempos de carga óptimos.
-- [ ] **Accesibilidad:** Auditar los componentes principales con `axe-core` para mejorar la accesibilidad.
+- [ ] **Limpieza de Linting:** Corregir todos los errores y advertencias de ESLint en `Dashboard` y `Register` (ahora hay 56+).
 - [ ] **Infraestructura de Correos:** Reemplazar Nodemailer local por un servicio transaccional (ej. Resend, SendGrid) con dominio verificado (SPF/DKIM) para garantizar entregabilidad en Inbox.
 
 ## 6. SEO y Performance

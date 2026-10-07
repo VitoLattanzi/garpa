@@ -2,13 +2,14 @@ import { NextResponse } from 'next/server'
 import nodemailer from 'nodemailer'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { safeQuery } from '@/lib/supabase-utils'
+import { env } from '@/lib/env'
 
 // Configuración del transporter
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: env.EMAIL_USER,
+    pass: env.EMAIL_PASS,
   },
 })
 
@@ -33,12 +34,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Error guardando en BD' }, { status: 500 })
     }
 
-    const invitationUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://garpa.vercel.app'}/register?invitationId=${invitacion.id}`
+    const invitationUrl = `${env.NEXT_PUBLIC_SITE_URL}/register?invitationId=${invitacion.id}`
 
     // 2. Enviar correo
     try {
       const info = await transporter.sendMail({
-        from: `"Garpa" <${process.env.EMAIL_USER}>`,
+        from: `"Garpa" <${env.EMAIL_USER}>`,
         to: emailInvitado,
         subject: `${nombreInvitador} te invitó a Garpa`,
         text: `${nombreInvitador} te ha invitado a unirte a Garpa para gestionar gastos y deudas con amigos. Acepta la invitación aquí: ${invitationUrl}`,
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
           </div>
         `,
         headers: {
-          'Reply-To': process.env.EMAIL_USER || ''
+          'Reply-To': env.EMAIL_USER || ''
         }
       })
       console.log("Éxito de Nodemailer. ID:", info.messageId)
