@@ -248,7 +248,7 @@ const translations = {
   },
 }
 
-type TranslationKey = keyof typeof translations.es
+export type TranslationKey = keyof typeof translations.es
 
 type LangContextType = {
   lang: Lang

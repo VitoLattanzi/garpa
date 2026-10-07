@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { useLang } from '@/context/LangContext'
+import { useLang, TranslationKey } from '@/context/LangContext'
 import { getAuthErrorMessage } from '@/lib/auth-errors'
 
 /**
@@ -136,7 +136,7 @@ export default function RegisterPage() {
         </div>
 
         {error && (
-          <p className="text-red-500 text-sm">{t(error as keyof typeof import('@/context/LangContext')['en'])}</p>
+          <p className="text-red-500 text-sm">{t(error as TranslationKey)}</p>
         )}
 
         <button
