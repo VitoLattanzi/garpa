@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useLang } from '@/context/LangContext'
@@ -14,6 +14,7 @@ import { getAuthErrorMessage } from '@/lib/auth-errors'
  */
 export default function RegisterPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createSupabaseBrowserClient()
   const { t } = useLang()
 
@@ -23,6 +24,13 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+
+  useEffect(() => {
+    const invId = searchParams.get('invitationId')
+    if (invId) {
+      sessionStorage.setItem('pendingInvitationId', invId)
+    }
+  }, [searchParams])
 
   /**
    * Verificación al montar el componente
@@ -128,6 +136,7 @@ export default function RegisterPage() {
         </div>
 
         {error && (
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           <p className="text-red-500 text-sm">{t(error as any)}</p>
         )}
 

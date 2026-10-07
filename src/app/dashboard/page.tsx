@@ -138,6 +138,30 @@ export default function DashboardPage() {
   const [isDemo, setIsDemo] = useState(false)
 
   useEffect(() => {
+    async function processPendingInvitation(userId: string) {
+      const invId = sessionStorage.getItem('pendingInvitationId')
+      if (!invId) return
+
+      const { data: inv } = await supabase
+        .from('invitaciones')
+        .select('id, invitado_por')
+        .eq('id', invId)
+        .eq('estado', 'pendiente')
+        .single()
+
+      if (inv) {
+        // Crear amistad
+        await supabase.from('amistades').insert([
+          { usuario_id: userId, amigo_id: inv.invitado_por, estado: 'activo' },
+          { usuario_id: inv.invitado_por, amigo_id: userId, estado: 'activo' }
+        ])
+        // Marcar invitación como aceptada
+        await supabase.from('invitaciones').update({ estado: 'aceptada' }).eq('id', invId)
+      }
+
+      sessionStorage.removeItem('pendingInvitationId')
+    }
+
     async function cargarDatos() {
       const demoActivo = document.cookie.includes('garpa-demo=true')
       setIsDemo(demoActivo)
@@ -161,6 +185,9 @@ export default function DashboardPage() {
       if (!session) return router.push('/login')
       const uid = session.user.id
       setUserId(uid)
+
+      // Procesar invitación pendiente si existe
+      await processPendingInvitation(uid)
 
       // Perfil
       const { data: perfil } = await safeQuery<{nombre: string, email: string}>(

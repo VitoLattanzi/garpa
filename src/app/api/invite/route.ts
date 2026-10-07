@@ -18,18 +18,22 @@ export async function POST(request: Request) {
     const supabase = await createSupabaseServerClient()
 
     // 1. Guardar en BD
-    const { error: dbError } = await safeQuery<any>(supabase
+    const { data: invitacion, error: dbError } = await safeQuery<any>(supabase
       .from('invitaciones')
       .insert({
         invitado_por: usuarioInvitadorId,
         email_invitado: emailInvitado,
         estado: 'pendiente'
-      }))
+      })
+      .select('id')
+      .single())
 
-    if (dbError) {
+    if (dbError || !invitacion) {
       console.error('Error guardando invitación:', dbError)
       return NextResponse.json({ success: false, error: 'Error guardando en BD' }, { status: 500 })
     }
+
+    const invitationUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://garpa.vercel.app'}/register?invitationId=${invitacion.id}`
 
     // 2. Enviar correo
     try {
@@ -37,12 +41,12 @@ export async function POST(request: Request) {
         from: `"Garpa" <${process.env.EMAIL_USER}>`,
         to: emailInvitado,
         subject: `${nombreInvitador} te invitó a Garpa`,
-        text: `${nombreInvitador} te ha invitado a unirte a Garpa para gestionar gastos y deudas con amigos. Acepta la invitación aquí: ${process.env.NEXT_PUBLIC_SITE_URL || 'https://garpa.vercel.app'}/register`,
+        text: `${nombreInvitador} te ha invitado a unirte a Garpa para gestionar gastos y deudas con amigos. Acepta la invitación aquí: ${invitationUrl}`,
         html: `
           <div style="font-family: Arial, sans-serif; padding: 20px;">
             <h1>¡Hola!</h1>
             <p>${nombreInvitador} te ha invitado a unirte a <strong>Garpa</strong> para gestionar gastos y deudas con amigos.</p>
-            <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://garpa.vercel.app'}/register" 
+            <a href="${invitationUrl}" 
                style="background: #3D8B7A; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
                Aceptar invitación
             </a>
