@@ -136,8 +136,7 @@ export default function RegisterPage() {
         </div>
 
         {error && (
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          <p className="text-red-500 text-sm">{t(error as any)}</p>
+          <p className="text-red-500 text-sm">{t(error as keyof typeof import('@/context/LangContext')['en'])}</p>
         )}
 
         <button
