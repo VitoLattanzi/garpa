@@ -12,6 +12,8 @@ import { getAuthErrorMessage } from '@/lib/auth-errors'
  * Crea un nuevo usuario en Supabase Auth y su perfil en la tabla usuarios
  * Conectado con LangContext para soporte multiidioma
  */
+export const dynamic = 'force-dynamic'
+
 export default function RegisterPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
