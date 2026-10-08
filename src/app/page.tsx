@@ -86,9 +86,10 @@ export default function LandingPage() {
 
       {/* ===== PLACEHOLDER screenshot ===== */}
       <section className="px-8 max-w-5xl mx-auto mb-24">
-        <div className="w-full aspect-video rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-3">
+        <div className="w-full aspect-video rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-3 bg-card/50">
           <div className="text-4xl opacity-30">📱</div>
-          <p className="text-sm text-muted">{t('screenshot_placeholder')}</p>
+          <p className="text-sm text-muted font-medium">App Preview Coming Soon</p>
+          <p className="text-xs text-muted/60">{t('screenshot_placeholder')}</p>
         </div>
       </section>
 
@@ -141,9 +142,20 @@ export default function LandingPage() {
       </section>
 
       {/* ===== FOOTER ===== */}
-      <footer className="border-t border-border px-8 py-6 flex items-center justify-between max-w-5xl mx-auto">
-        <Image src="/logo-garpa.svg" alt="Garpa" width={80} height={24} className="object-contain opacity-80" />
-        <span className="text-sm text-muted">© 2026 Garpa. Todos los derechos reservados.</span>
+      <footer className="border-t border-border px-8 py-12 max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="flex flex-col gap-2">
+          <Image src="/logo-garpa.svg" alt="Garpa" width={80} height={24} className="object-contain opacity-80" />
+          <p className="text-sm text-muted max-w-xs">
+            Garpa simplifica la gestión de gastos compartidos, permitiéndote organizar cuentas con amigos de forma clara y sin complicaciones.
+          </p>
+        </div>
+        <div className="flex flex-col md:flex-row items-center gap-6">
+          <div className="flex gap-4">
+            <Link href="https://github.com/tu-usuario/garpa" target="_blank" className="text-sm text-sec hover:text-main transition">GitHub</Link>
+            <Link href="https://linkedin.com/in/tu-perfil" target="_blank" className="text-sm text-sec hover:text-main transition">LinkedIn</Link>
+          </div>
+          <span className="text-sm text-muted">© 2026 Garpa. Todos los derechos reservados.</span>
+        </div>
       </footer>
 
     </main>

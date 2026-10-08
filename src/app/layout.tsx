@@ -17,8 +17,22 @@ const geist = Geist({
  * Metadata global de la app
  */
 export const metadata: Metadata = {
-  title: 'Garpa — Split expenses, simplify debts',
-  description: 'Dividí gastos con amigos y grupos. Sin drama.',
+  metadataBase: new URL('https://garpa.app'),
+  title: 'Garpa — Divide gastos, simplifica deudas',
+  description: 'La forma más fácil de organizar gastos con amigos y grupos. Crea grupos, divide cuentas y olvídate de quién debe qué.',
+  openGraph: {
+    title: 'Garpa — Divide gastos, simplifica deudas',
+    description: 'La forma más fácil de organizar gastos con amigos y grupos. Crea grupos, divide cuentas y olvídate de quién debe qué.',
+    url: 'https://garpa.app',
+    siteName: 'Garpa',
+    locale: 'es_ES',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Garpa — Divide gastos, simplifica deudas',
+    description: 'La forma más fácil de organizar gastos con amigos y grupos.',
+  },
 }
 
 /**

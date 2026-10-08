@@ -29,7 +29,7 @@ Este archivo documenta los hallazgos de auditoría del código, clasificados por
 - [ ] **Infraestructura de Correos:** Reemplazar Nodemailer local por un servicio transaccional (ej. Resend, SendGrid) con dominio verificado (SPF/DKIM) para garantizar entregabilidad en Inbox.
 
 ## 6. SEO y Performance
-- [ ] **Optimización SEO On-Page:**
-  - Unificar el idioma de los metadatos (poner el `title` en español para que coincida con el H1).
-  - Configurar en `layout.tsx` la URL canónica, etiquetas Open Graph (OG), Twitter Cards y el Apple Touch Icon.
-  - Agregar un footer simple en la landing page con texto descriptivo y enlaces externos (ej. perfil de LinkedIn y repo de GitHub) para mejorar el ratio de enlazado y texto.
+- [x] **Optimización SEO On-Page:**
+  - [x] Unificar el idioma de los metadatos (título y descripción).
+  - [x] Configurar en `layout.tsx` el `metadataBase`, Open Graph y Twitter Cards.
+  - [x] Agregar footer detallado en la landing page con enlaces externos.
