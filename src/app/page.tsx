@@ -85,13 +85,13 @@ export default function LandingPage() {
       </section>
 
       {/* ===== PLACEHOLDER screenshot ===== */}
-      <section className="px-8 max-w-5xl mx-auto mb-24">
+      {/* <section className="px-8 max-w-5xl mx-auto mb-24">
         <div className="w-full aspect-video rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-3 bg-card/50">
           <div className="text-4xl opacity-30">📱</div>
           <p className="text-sm text-muted font-medium">App Preview Coming Soon</p>
           <p className="text-xs text-muted/60">{t('screenshot_placeholder')}</p>
         </div>
-      </section>
+      </section> */}
 
       {/* ===== FEATURES ===== */}
       <section className="px-8 max-w-5xl mx-auto mb-24">
