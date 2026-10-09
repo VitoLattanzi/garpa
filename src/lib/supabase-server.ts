@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import { env } from './env'
+import { env } from './env-server'
 
 /**
  * Cliente de Supabase para usar en Server Components y API Routes

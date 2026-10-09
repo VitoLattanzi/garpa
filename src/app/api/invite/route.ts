@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import nodemailer from 'nodemailer'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { safeQuery } from '@/lib/supabase-utils'
-import { env } from '@/lib/env'
+import { env } from '@/lib/env-server'
 
 // Configuración del transporter
 const transporter = nodemailer.createTransport({
@@ -19,6 +19,7 @@ export async function POST(request: Request) {
     const supabase = await createSupabaseServerClient()
 
     // 1. Guardar en BD
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: invitacion, error: dbError } = await safeQuery<any>(supabase
       .from('invitaciones')
       .insert({
