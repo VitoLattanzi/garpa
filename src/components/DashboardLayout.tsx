@@ -8,6 +8,8 @@ import BottomNav from '@/components/BottomNav'
 import ModalNuevoGrupo from '@/components/ModalNuevoGrupo'
 import ModalNuevoGasto from '@/components/ModalNuevoGasto'
 import ModalAgregarAmigo from '@/components/ModalAgregarAmigo'
+import ModalSolicitudes from '@/components/ModalSolicitudes'
+import NotificacionesBell from '@/components/NotificacionesBell'
 import { Grupo, Amigo, Deuda } from '@/types/garpa'
 import { useLang } from '@/context/LangContext'
 import { useIdleLogout } from '@/hooks/useIdleLogout'
@@ -28,12 +30,12 @@ export const useDashboard = () => {
 type DashboardLayoutProps = {
   children: React.ReactNode
   isDemo: boolean
-  user: any
+  user: { nombre: string; email: string } | null
   userId: string | null
   grupos: Grupo[]
   amigos: Amigo[]
   onRefreshData?: () => void
-  onAmigoAdded?: (amigo: any) => void
+  onAmigoAdded?: (amigo: Amigo) => void
   onGrupoCreated?: (grupo: Grupo) => void
   deudas?: Deuda[]
   onSaldarDeuda?: (id: string) => void
@@ -80,10 +82,11 @@ export default function DashboardLayout({
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col h-screen overflow-hidden">
           {/* Mobile Header */}
-          <header className="md:hidden flex items-center px-6 h-16 bg-[#172130] border-b border-[#1E2D3D]">
+          <header className="md:hidden flex items-center justify-between px-6 h-16 bg-[#172130] border-b border-[#1E2D3D]">
             <Link href={isDemo ? '/' : '/dashboard'} className="flex items-center">
               <Image src="/logo-garpa.svg" alt="GARPA" width={100} height={32} className="object-contain" priority />
             </Link>
+            <NotificacionesBell openModal={openModal} />
           </header>
 
           <main className={`flex-1 overflow-y-auto pb-20 md:pb-0 ${isDemo ? 'mt-8' : ''}`}>
@@ -120,6 +123,12 @@ export default function DashboardLayout({
             onAdded={onAmigoAdded || (() => {})} 
             userId={userId} 
             isDemo={isDemo} 
+          />
+        )}
+        {activeModal === 'solicitudes' && userId && (
+          <ModalSolicitudes 
+            onClose={() => setActiveModal(null)} 
+            userId={userId} 
           />
         )}
 

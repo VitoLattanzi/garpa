@@ -1,25 +1,28 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useLang } from '@/context/LangContext'
+import NotificacionesBell from '@/components/NotificacionesBell'
+import { Grupo } from '@/types/garpa'
 
 type SidebarProps = {
   isDemo: boolean
-  user: any
-  grupos: any[]
+  user: { nombre: string; email: string } | null
+  grupos: Grupo[]
   onOpenModal: (modalName: string) => void
 } 
 
-export default function Sidebar({ isDemo, user, grupos, onOpenModal }: SidebarProps) {
+export default function Sidebar({ isDemo, grupos, onOpenModal }: SidebarProps) {
   const { t, lang } = useLang()
 
   return (
     <aside className="hidden md:flex w-64 h-screen bg-[#172130] border-r border-[#1E2D3D] flex-col flex-shrink-0">
       <div className="flex flex-col h-full">
         {/* Header */}
-        <div className="flex items-center p-6 h-16">
+        <div className="flex items-center justify-between p-6 h-16">
           <Link href={isDemo ? '/' : '/dashboard'} className="flex items-center">
             <Image src="/logo-garpa.svg" alt="GARPA" width={120} height={40} className="object-contain" priority />
           </Link>
+          <NotificacionesBell openModal={onOpenModal} />
         </div>
 
         {/* Menú */}
