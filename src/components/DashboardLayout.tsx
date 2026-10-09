@@ -35,7 +35,7 @@ type DashboardLayoutProps = {
   grupos: Grupo[]
   amigos: Amigo[]
   onRefreshData?: () => void
-  onAmigoAdded?: (amigo: Amigo) => void
+  onAmigoAdded?: (amigo: { id: string; nombre: string; email: string }) => void
   onGrupoCreated?: (grupo: Grupo) => void
   deudas?: Deuda[]
   onSaldarDeuda?: (id: string) => void
